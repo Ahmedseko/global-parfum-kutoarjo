@@ -34,19 +34,16 @@ Butuh **3 terminal terpisah**: satu untuk database (kalau pakai Docker), satu un
 
 #### Opsi A: Pakai Docker (direkomendasikan)
 
-```bash
-docker run -d --name gpk-mysql -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 mysql:8.0
-```
-
-Tunggu ±10–15 detik sampai MySQL siap menerima koneksi, lalu isi skema & data contoh:
+Dari root folder proyek:
 
 ```bash
-mysql -h 127.0.0.1 -u root -proot < database/schema.sql
-mysql -h 127.0.0.1 -u root -proot < database/seed.sql
+docker compose up -d
 ```
 
-> Kalau nanti mau mengulang dari awal (reset data), tinggal hapus containernya lalu ulangi langkah di atas:
-> `docker rm -f gpk-mysql`
+Satu perintah ini otomatis membuat database, mengisi skema, dan mengisi data contoh (lewat `database/schema.sql` & `database/seed.sql`) di container `gpk-mysql`. Datanya juga **persisten** — tidak hilang walau containernya di-stop/restart.
+
+> Kalau nanti mau reset total (hapus semua data & mulai dari seed awal lagi):
+> `docker compose down -v && docker compose up -d`
 
 #### Opsi B: Pakai MySQL yang Sudah Terpasang
 
@@ -102,7 +99,7 @@ Login → Dashboard → Produk → Stok → Penjualan → Closing Harian → Lap
 
 | Masalah | Solusi |
 | --- | --- |
-| Server error `ECONNREFUSED` ke database | Pastikan MySQL sudah menyala (`docker ps` kalau pakai Docker) dan `.env` di folder `server/` sudah benar. |
+| Server error `ECONNREFUSED` ke database | Pastikan MySQL sudah menyala (`docker compose ps` kalau pakai Docker) dan `.env` di folder `server/` sudah benar. |
 | `Error: listen EADDRINUSE` saat `npm run dev` | Port 4000 atau 5173 sudah dipakai proses lain. Tutup proses lama, atau ubah `PORT` di `server/.env`. |
 | Halaman login gagal terus / "Email atau kata sandi salah" | Pastikan `database/seed.sql` sudah dijalankan — akun demo ada di sana. |
 | Perubahan kode tidak muncul di browser | Pastikan `npm run dev` di folder `client/` masih berjalan (bukan `npm run build`). |

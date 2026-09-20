@@ -17,8 +17,9 @@ import { Select, Input } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
 import { StatCard } from '../components/StatCard';
 import { getSalesReport, exportSalesExcel } from '../services/reports';
-import type { ReportSummary } from '../types';
-import { formatCurrency, formatCompactCurrency, formatDate, todayIso } from '../utils/format';
+import { getSettings } from '../services/settings';
+import type { ReportSummary, Settings } from '../types';
+import { formatCurrency, formatCompactCurrency, formatDate, formatDateTime, todayIso } from '../utils/format';
 import { useToast } from '../hooks/useToast';
 
 type Preset = 'today' | 'week' | 'month' | 'custom';
@@ -47,6 +48,7 @@ export default function Laporan() {
   const [data, setData] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   const range = useMemo(() => rangeFor(preset, customFrom, customTo), [preset, customFrom, customTo]);
 
@@ -56,6 +58,12 @@ export default function Laporan() {
       .then(setData)
       .finally(() => setLoading(false));
   }, [range.from, range.to]);
+
+  useEffect(() => {
+    getSettings()
+      .then(setSettings)
+      .catch(() => {});
+  }, []);
 
   async function handleExport() {
     setExporting(true);
@@ -70,7 +78,7 @@ export default function Laporan() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5 print:hidden">
         <Select value={preset} onChange={(e) => setPreset(e.target.value as Preset)} className="w-44">
           <option value="today">Hari Ini</option>
           <option value="week">Minggu Ini</option>
@@ -99,13 +107,32 @@ export default function Laporan() {
         <div className="text-sm text-text-muted">Memuat laporan...</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="hidden print:block mb-2">
+            <h1 className="text-lg font-semibold text-black">{settings?.storeName ?? 'Global Parfum Kutoarjo'}</h1>
+            <p className="text-sm text-black">
+              Laporan Penjualan &middot; {formatDate(range.from)} &ndash; {formatDate(range.to)}
+            </p>
+            <p className="text-xs text-gray-500">Dicetak {formatDateTime(new Date().toISOString())}</p>
+            <div className="flex gap-6 mt-3 text-sm text-black">
+              <span>
+                Total Transaksi: <strong>{data.totalTransactions}</strong>
+              </span>
+              <span>
+                Total Pendapatan: <strong>{formatCurrency(data.totalRevenue)}</strong>
+              </span>
+              <span>
+                Produk Terjual: <strong>{data.totalItemsSold} item</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print:hidden">
             <StatCard label="Total Transaksi" value={`${data.totalTransactions}`} icon={Receipt} />
             <StatCard label="Total Pendapatan" value={formatCurrency(data.totalRevenue)} icon={Wallet} tone="success" />
             <StatCard label="Produk Terjual" value={`${data.totalItemsSold} item`} icon={Package2} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 print:hidden">
             <Card>
               <CardHeader>
                 <CardTitle>Tren Penjualan</CardTitle>
@@ -173,22 +200,25 @@ export default function Laporan() {
             </Card>
           </div>
 
-          <Card className="overflow-hidden">
-            <CardHeader>
+          <Card className="overflow-hidden print:border-0 print:shadow-none">
+            <CardHeader className="print:hidden">
               <CardTitle>Transaksi Penjualan</CardTitle>
             </CardHeader>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm print:text-black">
                 <thead>
-                  <tr className="border-b border-border bg-bg/50">
+                  <tr className="border-b border-border bg-bg/50 print:border-gray-300 print:bg-transparent">
                     {['Tanggal', 'No. Transaksi', 'Produk', 'Total', 'Metode'].map((h) => (
-                      <th key={h} className="text-left font-medium text-text-faint text-[11px] uppercase tracking-wide px-3.5 py-2.5">
+                      <th
+                        key={h}
+                        className="text-left font-medium text-text-faint text-[11px] uppercase tracking-wide px-3.5 py-2.5 print:text-black print:px-2 print:py-1.5"
+                      >
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-border print:divide-gray-200">
                   {data.sales.length === 0 && (
                     <tr>
                       <td colSpan={5}>
@@ -197,12 +227,18 @@ export default function Laporan() {
                     </tr>
                   )}
                   {data.sales.map((s) => (
-                    <tr key={s.id} className="hover:bg-white/[0.02] transition">
-                      <td className="px-3.5 py-2.5 text-text-muted">{formatDate(s.date)}</td>
-                      <td className="px-3.5 py-2.5 text-text">{s.transactionNumber}</td>
-                      <td className="px-3.5 py-2.5 text-text-muted">{s.items.map((i) => i.productName).join(', ')}</td>
-                      <td className="px-3.5 py-2.5 font-mono tnum text-text">{formatCurrency(s.total)}</td>
-                      <td className="px-3.5 py-2.5 text-text-muted capitalize">{s.paymentMethod}</td>
+                    <tr key={s.id} className="hover:bg-white/[0.02] transition print:break-inside-avoid">
+                      <td className="px-3.5 py-2.5 text-text-muted print:text-black print:px-2 print:py-1.5">{formatDate(s.date)}</td>
+                      <td className="px-3.5 py-2.5 text-text print:text-black print:px-2 print:py-1.5">{s.transactionNumber}</td>
+                      <td className="px-3.5 py-2.5 text-text-muted print:text-black print:px-2 print:py-1.5">
+                        {s.items.map((i) => i.productName).join(', ')}
+                      </td>
+                      <td className="px-3.5 py-2.5 font-mono tnum text-text print:text-black print:px-2 print:py-1.5">
+                        {formatCurrency(s.total)}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-text-muted capitalize print:text-black print:px-2 print:py-1.5">
+                        {s.paymentMethod}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
