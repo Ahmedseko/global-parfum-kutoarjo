@@ -20,3 +20,7 @@ export function createProduct(input: ProductInput) {
 export function updateProduct(id: number, input: Partial<ProductInput> & { status?: Product['status'] }) {
   return api.put<Product>(`/products/${id}`, input);
 }
+
+export function deleteProduct(id: number) {
+  return api.delete<{ deleted: boolean; product: Product | null }>(`/products/${id}`);
+}

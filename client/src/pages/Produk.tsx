@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Pencil, Power, PackageX } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, PackageX } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -9,7 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
-import { listProducts, createProduct, updateProduct, type ProductInput } from '../services/products';
+import { listProducts, createProduct, updateProduct, deleteProduct, type ProductInput } from '../services/products';
 import type { Product } from '../types';
 import { formatCurrency } from '../utils/format';
 
@@ -105,11 +105,19 @@ export default function Produk() {
     }
   }
 
-  async function toggleStatus(product: Product) {
-    const nextStatus = product.status === 'aktif' ? 'nonaktif' : 'aktif';
-    await updateProduct(product.id, { status: nextStatus });
-    showToast(nextStatus === 'aktif' ? 'Produk diaktifkan kembali.' : 'Produk dinonaktifkan.');
-    load();
+  async function handleDelete(product: Product) {
+    if (!window.confirm(`Hapus produk "${product.name}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+    try {
+      const result = await deleteProduct(product.id);
+      showToast(
+        result.deleted
+          ? 'Produk berhasil dihapus.'
+          : 'Produk sudah punya riwayat transaksi/stok, jadi dinonaktifkan (tidak dihapus) agar data tetap konsisten.',
+      );
+      load();
+    } catch {
+      showToast('Gagal menghapus produk.', 'error');
+    }
   }
 
   const isValid = form.name.trim().length > 0 && form.price > 0 && form.lowStockThreshold >= 0;
@@ -196,12 +204,12 @@ export default function Produk() {
                           <Pencil size={14} />
                         </button>
                         <button
-                          onClick={() => toggleStatus(p)}
-                          className="p-1.5 rounded text-text-muted hover:text-text hover:bg-white/[0.06] transition"
-                          aria-label="Ubah status"
-                          title={p.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                          onClick={() => handleDelete(p)}
+                          className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition"
+                          aria-label="Hapus"
+                          title="Hapus"
                         >
-                          <Power size={14} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>

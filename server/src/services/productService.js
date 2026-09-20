@@ -77,3 +77,24 @@ export async function updateProduct(id, updates) {
 
   return getProductById(id);
 }
+
+export async function deleteProduct(id) {
+  const existing = await getProductById(id);
+  if (!existing) {
+    throw new AppError('Produk tidak ditemukan.', 404);
+  }
+
+  try {
+    await pool.query('DELETE FROM products WHERE id = ?', [id]);
+    return { deleted: true, product: null };
+  } catch (err) {
+    // Referenced by sale_items / stock_movements / daily_closing_items —
+    // hard delete would corrupt historical reports, so fall back to
+    // deactivating instead of destroying that history.
+    if (err.errno === 1451) {
+      await pool.query("UPDATE products SET status = 'nonaktif' WHERE id = ?", [id]);
+      return { deleted: false, product: await getProductById(id) };
+    }
+    throw err;
+  }
+}
