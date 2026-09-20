@@ -1,5 +1,5 @@
 import { type HTMLAttributes } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '../../utils/cn';
 
 type Tone = 'neutral' | 'success' | 'danger' | 'warning' | 'accent';
 
@@ -18,7 +18,7 @@ interface Props extends HTMLAttributes<HTMLSpanElement> {
 export function Badge({ className, tone = 'neutral', ...props }: Props) {
   return (
     <span
-      className={clsx(
+      className={cn(
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
         toneClasses[tone],
         className,

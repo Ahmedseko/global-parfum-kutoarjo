@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, History } from 'lucide-react';
+import { Plus, History, Trash2, ArrowRight } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Select, FormField, Input, Textarea } from '../components/ui/Input';
+import { Select, FormField, Input, Label } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { listProducts } from '../services/products';
 import { listStockMovements, addStock } from '../services/stock';
 import type { Product, StockMovement, StockMovementType } from '../types';
+import { ApiRequestError } from '../services/api';
 import { formatDate, todayIso } from '../utils/format';
 
 const typeTone: Record<StockMovementType, { label: string; tone: 'success' | 'accent' | 'warning' }> = {
@@ -19,17 +20,28 @@ const typeTone: Record<StockMovementType, { label: string; tone: 'success' | 'ac
   penyesuaian: { label: 'Penyesuaian', tone: 'warning' },
 };
 
+interface StockLine {
+  key: number;
+  productId: number | null;
+  quantity: number;
+  note: string;
+}
+
+let lineKeyCounter = 0;
+function newLine(productId: number | null): StockLine {
+  return { key: ++lineKeyCounter, productId, quantity: 0, note: '' };
+}
+
 export default function Stok() {
   const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [productId, setProductId] = useState<number | null>(null);
-  const [quantity, setQuantity] = useState(0);
   const [date, setDate] = useState(todayIso());
-  const [note, setNote] = useState('');
+  const [lines, setLines] = useState<StockLine[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   function load() {
@@ -53,32 +65,48 @@ export default function Stok() {
   }, [searchParams]);
 
   const activeProducts = useMemo(() => products.filter((p) => p.status === 'aktif'), [products]);
-  const selectedProduct = products.find((p) => p.id === productId) ?? null;
 
   function openModal() {
-    setProductId(activeProducts[0]?.id ?? null);
-    setQuantity(0);
     setDate(todayIso());
-    setNote('');
+    setLines([newLine(activeProducts[0]?.id ?? null)]);
+    setError(null);
     setModalOpen(true);
   }
 
+  function addLine() {
+    setLines((prev) => [...prev, newLine(activeProducts[0]?.id ?? null)]);
+  }
+
+  function removeLine(key: number) {
+    setLines((prev) => prev.filter((l) => l.key !== key));
+  }
+
+  function updateLine(key: number, patch: Partial<StockLine>) {
+    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  }
+
   async function handleSubmit() {
-    if (!productId || quantity <= 0) return;
     setSaving(true);
+    setError(null);
     try {
-      await addStock({ productId, quantity, date, note: note.trim() || undefined });
-      showToast('Stok berhasil diperbarui.');
+      for (const line of lines) {
+        if (!line.productId || line.quantity <= 0) continue;
+        await addStock({ productId: line.productId, quantity: line.quantity, date, note: line.note.trim() || undefined });
+      }
+      showToast(
+        lines.length > 1 ? `Stok ${lines.length} produk berhasil ditambahkan.` : 'Stok berhasil diperbarui.',
+      );
       setModalOpen(false);
       load();
-    } catch {
-      showToast('Gagal menambah stok.', 'error');
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Gagal menambah stok.');
+      load();
     } finally {
       setSaving(false);
     }
   }
 
-  const isValid = productId !== null && quantity > 0;
+  const isValid = lines.length > 0 && lines.every((l) => l.productId !== null && l.quantity > 0);
 
   return (
     <div className="space-y-4">
@@ -180,6 +208,8 @@ export default function Stok() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Tambah Stok"
+        description="Bisa tambah stok untuk beberapa produk sekaligus."
+        size="lg"
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
@@ -193,46 +223,74 @@ export default function Stok() {
       >
         <div className="space-y-3.5">
           <FormField label="Tanggal">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </FormField>
-          <FormField label="Produk">
-            <Select value={productId ?? ''} onChange={(e) => setProductId(Number(e.target.value))}>
-              {activeProducts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="Jumlah Stok Tambahan">
-            <Input
-              type="number"
-              min={1}
-              value={quantity || ''}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-            />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="max-w-[200px]" />
           </FormField>
 
-          {selectedProduct && (
-            <div className="grid grid-cols-3 gap-2 rounded-lg bg-bg border border-border p-3 text-center">
-              <div>
-                <div className="text-[11px] text-text-faint mb-0.5">Stok Sebelumnya</div>
-                <div className="font-mono tnum text-text">{selectedProduct.stock}</div>
-              </div>
-              <div>
-                <div className="text-[11px] text-text-faint mb-0.5">Stok Tambahan</div>
-                <div className="font-mono tnum text-success">+{quantity || 0}</div>
-              </div>
-              <div>
-                <div className="text-[11px] text-text-faint mb-0.5">Stok Setelah</div>
-                <div className="font-mono tnum text-text font-semibold">{selectedProduct.stock + (quantity || 0)}</div>
-              </div>
+          <div>
+            <Label>Produk</Label>
+            <div className="space-y-2">
+              {lines.map((line) => {
+                const product = activeProducts.find((p) => p.id === line.productId) ?? null;
+                return (
+                  <div key={line.key} className="rounded-lg border border-border bg-bg p-2.5 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={line.productId ?? ''}
+                        onChange={(e) => updateLine(line.key, { productId: Number(e.target.value) })}
+                        className="flex-1 min-w-0"
+                      >
+                        {activeProducts.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.size})
+                          </option>
+                        ))}
+                      </Select>
+                      <button
+                        onClick={() => removeLine(line.key)}
+                        disabled={lines.length === 1}
+                        className="h-9 w-9 shrink-0 flex items-center justify-center rounded text-text-faint hover:text-danger hover:bg-danger/10 transition disabled:opacity-30 disabled:pointer-events-none"
+                        aria-label="Hapus baris"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Jumlah"
+                        value={line.quantity || ''}
+                        onChange={(e) => updateLine(line.key, { quantity: Number(e.target.value) })}
+                        className="w-24 shrink-0"
+                      />
+                      {product && (
+                        <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono tnum text-text-faint shrink-0">
+                          <span>{product.stock}</span>
+                          <ArrowRight size={11} />
+                          <span className="text-text font-medium">{product.stock + (line.quantity || 0)}</span>
+                        </div>
+                      )}
+                      <Input
+                        placeholder="Catatan (opsional)"
+                        value={line.note}
+                        onChange={(e) => updateLine(line.key, { note: e.target.value })}
+                        className="flex-1 min-w-0"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
+            <button
+              onClick={addLine}
+              className="mt-2 flex items-center gap-1.5 text-[13px] text-accent hover:text-accent-hover transition"
+            >
+              <Plus size={13} />
+              Tambah Produk Lain
+            </button>
+          </div>
 
-          <FormField label="Catatan (opsional)">
-            <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contoh: Kiriman bibit parfum baru" />
-          </FormField>
+          {error && <div className="text-[13px] text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{error}</div>}
         </div>
       </Modal>
     </div>
