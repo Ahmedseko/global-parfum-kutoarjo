@@ -4,7 +4,7 @@ Sistem Informasi Manajemen Penjualan dan Stok UMKM Parfum — aplikasi web seder
 
 ## Struktur Proyek
 
-```
+```text
 client/     React + Vite + TypeScript + Tailwind CSS (frontend)
 server/     Node.js + Express (REST API)
 database/   schema.sql & seed.sql (MySQL)
@@ -82,7 +82,7 @@ Masih di terminal yang sama, di dalam folder `global-parfum-kutoarjo`, jalankan:
 docker compose up -d
 ```
 
-Perintah ini otomatis membuat database MySQL **beserta isi datanya** (produk, akun demo, dll — lewat `database/schema.sql` dan `database/seed.sql`), semua dalam satu langkah. Tunggu sampai proses selesai (biasanya beberapa detik sampai 1 menit di percobaan pertama, karena perlu mengunduh image MySQL).
+Perintah ini otomatis membuat database MySQL beserta akun login awal (lewat `database/schema.sql` dan `database/seed.sql`), semua dalam satu langkah. Tidak ada data produk/penjualan contoh — aplikasi mulai dalam keadaan kosong, tinggal diisi sendiri lewat menu Produk setelah login. Tunggu sampai proses selesai (biasanya beberapa detik sampai 1 menit di percobaan pertama, karena perlu mengunduh image MySQL).
 
 Cek berhasil dengan:
 
@@ -170,8 +170,8 @@ Kalau sudah selesai pakai:
 
 | Peran | Email | Password |
 | --- | --- | --- |
-| Owner/Admin | admin@globalparfum.id | admin123 |
-| Staff | staff@globalparfum.id | staff123 |
+| Owner/Admin | `admin@globalparfum.id` | `admin123` |
+| Staff | `staff@globalparfum.id` | `staff123` |
 
 ## Alur Utama
 
