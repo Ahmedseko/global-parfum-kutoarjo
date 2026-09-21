@@ -1,0 +1,377 @@
+====================================================================
+RINGKASAN LENGKAP APLIKASI — BAHAN DASAR PRESENTASI CAPSTONE
+====================================================================
+Disusun: 21 September 2026
+
+
+====================================================================
+1. IDENTITAS PROYEK
+====================================================================
+
+Nama Aplikasi   : Global Parfum Kutoarjo
+Studi Kasus     : UMKM Parfum "Global Parfum Kutoarjo"
+
+Judul Capstone:
+"Perancangan dan Implementasi Sistem Informasi Manajemen Penjualan
+dan Stok Berbasis Web pada UMKM Parfum Global Parfum Kutoarjo
+Menggunakan Metode Prototyping"
+
+Deskripsi Singkat:
+Sistem Informasi Manajemen Penjualan dan Stok untuk UMKM Parfum —
+aplikasi web untuk mengelola data produk, stok, transaksi penjualan
+(kasir), closing harian, laporan usaha, hingga manajemen pengguna,
+secara terpusat dan real-time menggantikan pencatatan manual.
+
+
+====================================================================
+2. LATAR BELAKANG & TUJUAN
+====================================================================
+
+Latar Belakang:
+- UMKM parfum umumnya masih mencatat stok dan penjualan secara
+  manual (buku/spreadsheet terpisah), sehingga rawan salah hitung
+  stok, sulit rekap laporan harian, dan sulit dipantau real-time
+  oleh pemilik usaha.
+- Produk parfum punya dua model penjualan yang berbeda: dijual utuh
+  per botol (parfum branded/segel) dan dijual eceran per mililiter
+  (decant/refill) — pencatatan manual kesulitan membedakan dua
+  satuan ini secara konsisten.
+
+Tujuan Sistem:
+1. Mendigitalkan pencatatan produk, stok, dan transaksi penjualan.
+2. Mendukung dua model satuan jual (per botol dan per ml) dalam satu
+   sistem yang sama, tanpa mengubah struktur data secara drastis.
+3. Menyediakan mekanisme rekonsiliasi stok harian (closing harian)
+   untuk mendeteksi selisih antara stok sistem dan stok fisik.
+4. Menyediakan laporan penjualan (termasuk ekspor Excel) sebagai
+   dasar pengambilan keputusan pemilik usaha.
+5. Membedakan hak akses antara pemilik/admin dan staf toko.
+
+
+====================================================================
+3. METODE PENGEMBANGAN: PROTOTYPING
+====================================================================
+
+Tahapan yang dilakukan:
+1. Pengumpulan Kebutuhan (Requirement Gathering)
+   - Identifikasi proses bisnis toko parfum: produk, stok, penjualan,
+     closing harian, laporan.
+2. Membangun Prototipe (Quick Design & Build)
+   - Modul dibangun bertahap: mulai dari autentikasi, produk & stok,
+     penjualan, closing harian, laporan, lalu manajemen pengguna.
+3. Evaluasi Prototipe
+   - Setiap modul diuji langsung (fungsional, alur data ke database)
+     sebelum lanjut ke modul berikutnya.
+4. Perbaikan / Revisi Prototipe
+   - Contoh nyata dari riwayat pengembangan:
+     * Aksi "nonaktifkan produk" diganti jadi hapus produk yang
+       sesungguhnya (delete), dengan fallback otomatis ke nonaktif
+       jika produk sudah punya riwayat transaksi (agar data historis
+       tidak rusak).
+     * Ditambahkan dukungan input stok untuk banyak produk sekaligus
+       dalam satu form, setelah ditemukan alur input satu-per-satu
+       kurang efisien untuk pengguna.
+     * Data dummy/contoh pada seed database dihapus, disisakan hanya
+       akun login, supaya aplikasi mulai dari kondisi bersih/nyata.
+     * Ditambahkan konsep satuan jual (botol vs ml) setelah disadari
+       kebutuhan bisnis nyata: sebagian parfum dijual eceran per ml.
+5. Iterasi berulang hingga sistem dinyatakan siap digunakan pengguna.
+
+Kenapa Prototyping dipilih (bukan Waterfall):
+Pengembangan tidak berjalan satu alur linear dari awal sampai akhir,
+melainkan bertahap per-modul dengan revisi berdasarkan hasil uji
+coba tiap tahap — ciri khas metode Prototyping.
+
+
+====================================================================
+4. TEKNOLOGI YANG DIGUNAKAN (TECH STACK)
+====================================================================
+
+--- FRONTEND (client/) ---
+- React 19.2                 : library utama membangun antarmuka (UI)
+- TypeScript                 : bahasa pemrograman (JavaScript + tipe data statis)
+- Vite 8                     : build tool & dev server (hot reload cepat)
+- Tailwind CSS 4             : utility-first CSS framework untuk styling
+- React Router DOM 7         : routing / navigasi antar halaman (SPA)
+- Recharts 3                 : pembuatan grafik (tren penjualan di dashboard)
+- Lucide React                : kumpulan ikon UI
+- clsx, tailwind-merge        : utilitas penggabungan className kondisional
+
+--- BACKEND (server/) ---
+- Node.js                    : runtime JavaScript sisi server
+- Express 5                  : framework REST API
+- JWT (jsonwebtoken 9)        : autentikasi berbasis token
+- bcryptjs 3                  : hashing password (keamanan akun)
+- mysql2                      : driver koneksi ke database MySQL (connection pool)
+- ExcelJS 4                   : membangkitkan file laporan Excel (.xlsx)
+- dotenv                      : pengelolaan variabel environment (.env)
+- cors                        : mengizinkan akses API lintas origin (frontend↔backend)
+- nodemon (dev only)          : auto-restart server saat development
+
+--- DATABASE ---
+- MySQL 8.0
+- Dijalankan via Docker container (nama: gpk-mysql), data persisten
+  lewat Docker volume — data tidak hilang walau komputer di-restart.
+
+--- INFRASTRUKTUR & TOOLS PENGEMBANGAN ---
+- Docker & Docker Compose     : menjalankan database MySQL secara terisolasi
+- Git & GitHub                : version control & kolaborasi kode
+- npm                         : manajemen dependency/package
+
+
+====================================================================
+5. ARSITEKTUR SISTEM
+====================================================================
+
+Pola Arsitektur : Client-Server, dengan REST API sebagai penghubung
+
+    [ Browser ]
+        |
+        |  React SPA (client, port 5173)
+        v
+    [ REST API ]
+        |
+        |  Express.js (server, port 4000)
+        |  Endpoint: /api/auth, /api/products, /api/stock,
+        |            /api/sales, /api/closing, /api/reports,
+        |            /api/settings, /api/users
+        v
+    [ Database ]
+        |
+        |  MySQL 8.0 (Docker container, port 3306)
+        v
+    (users, products, stock_movements, sales, sale_items,
+     daily_closings, daily_closing_items, settings)
+
+Alur Autentikasi:
+1. User login (email + password) -> backend verifikasi ke tabel users
+   (password dicocokkan dengan bcrypt).
+2. Backend menerbitkan JWT (masa berlaku 12 jam) berisi id, nama,
+   email, dan role user.
+3. Token disimpan di browser (localStorage jika "Ingat saya" dicentang,
+   atau sessionStorage jika tidak).
+4. Setiap request ke API menyertakan token lewat header
+   "Authorization: Bearer <token>".
+5. Middleware backend (requireAuth) memvalidasi token di setiap
+   endpoint terproteksi; middleware requireRole('admin') membatasi
+   endpoint tertentu hanya untuk admin.
+
+Struktur Folder Proyek:
+  client/     -> Frontend React + Vite + TypeScript + Tailwind
+  server/     -> Backend REST API (Node.js + Express)
+  database/   -> schema.sql (struktur tabel) & seed.sql (data awal)
+
+
+====================================================================
+6. STRUKTUR HALAMAN APLIKASI (FRONTEND) & HAK AKSES
+====================================================================
+
+  Path            Halaman              Akses
+  --------------  -------------------  ------------------------------
+  /login          Login                Publik (belum login)
+  /dashboard      Dashboard            Admin & Staff
+  /produk         Manajemen Produk     Admin & Staff (edit: admin saja)
+  /stok           Manajemen Stok       Admin & Staff
+  /penjualan      Penjualan (Kasir)    Admin & Staff
+  /closing        Closing Harian       Admin & Staff
+  /laporan        Laporan              Admin saja
+  /pengaturan     Pengaturan & Users   Admin saja
+
+Proteksi rute dilakukan di frontend (redirect otomatis jika tidak
+berhak) DAN di backend (setiap endpoint API divalidasi ulang) —
+sehingga pembatasan akses tidak bisa dilewati hanya dengan mengubah
+URL di browser.
+
+
+====================================================================
+7. FITUR UTAMA PER MODUL
+====================================================================
+
+A. LOGIN & AUTENTIKASI
+   - Login dengan email & password.
+   - Opsi "Ingat saya" (sesi tetap tersimpan setelah browser ditutup).
+   - Validasi akun nonaktif ditolak login.
+
+B. DASHBOARD
+   - Ringkasan penjualan hari ini (jumlah transaksi, pendapatan,
+     item terjual).
+   - Jumlah produk dengan stok menipis.
+   - Grafik tren penjualan bulan berjalan (menggunakan Recharts).
+   - Daftar produk terlaris.
+   - Aktivitas/transaksi penjualan terbaru.
+   - Daftar produk dengan stok menipis.
+
+C. MANAJEMEN PRODUK (Produk)
+   - CRUD produk: nama, kategori, ukuran (ml), SATUAN JUAL
+     (botol / ml — fitur terbaru), harga, batas stok menipis.
+   - Harga otomatis ditampilkan sesuai satuan (contoh: "Rp 2.500/ml"
+     untuk produk decant, "Rp 150.000/botol" untuk produk botolan).
+   - Filter berdasarkan kategori & status (aktif/nonaktif).
+   - Pencarian produk.
+   - Hapus produk: hapus permanen jika belum ada riwayat transaksi;
+     otomatis dinonaktifkan (bukan dihapus) jika produk sudah pernah
+     terpakai di transaksi/stok, agar laporan historis tetap valid.
+
+D. MANAJEMEN STOK (Stok)
+   - Tabel stok saat ini per produk (dengan satuan: botol/ml).
+   - Tambah stok masuk untuk BANYAK produk sekaligus dalam satu form.
+   - Riwayat pergerakan stok lengkap: stok masuk, penjualan, dan
+     penyesuaian (dari closing harian), dengan stok sebelum & sesudah.
+   - Tanggal stok masuk bisa diatur mundur (backdate) untuk mencatat
+     stok yang diterima di hari sebelumnya.
+
+E. PENJUALAN (Kasir / Point of Sale)
+   - Pencarian & pemilihan produk untuk dimasukkan ke keranjang.
+   - Menampilkan harga per satuan dan sisa stok saat memilih produk.
+   - Atur jumlah per item di keranjang, otomatis hitung subtotal & total.
+   - Metode pembayaran: tunai, QRIS, transfer.
+   - Nomor transaksi otomatis dengan format TRX-YYYYMMDD-NNN.
+   - Riwayat transaksi hari ini ditampilkan langsung di halaman.
+   - Stok berkurang otomatis begitu transaksi disimpan (transaksional,
+     tervalidasi agar stok tidak bisa minus).
+
+F. CLOSING HARIAN
+   - Rekonsiliasi stok sistem vs stok fisik di akhir hari, per produk:
+     stok awal, stok masuk, jumlah terjual, stok sistem, stok aktual
+     (hasil hitung fisik), dan selisihnya.
+   - Jika ada selisih, sistem otomatis mencatat penyesuaian stok
+     (stock adjustment) ke riwayat pergerakan stok dan memperbarui
+     stok produk sesuai hasil hitung fisik.
+   - Closing yang sudah difinalisasi terkunci (tidak bisa closing
+     dua kali di tanggal yang sama).
+   - Ringkasan otomatis: total transaksi, total item terjual, total
+     pendapatan hari itu.
+
+G. LAPORAN (Admin saja)
+   - Laporan penjualan dengan filter rentang tanggal.
+   - Ekspor laporan ke file Excel (.xlsx) — kolom: tanggal, nomor
+     transaksi, produk, kategori, ukuran, SATUAN, jumlah, harga,
+     subtotal, metode pembayaran.
+   - Laporan siap cetak (print-friendly).
+
+H. PENGATURAN & MANAJEMEN PENGGUNA (Admin saja)
+   - Pengaturan identitas toko: nama toko, nama pemilik, alamat,
+     telepon, mata uang, ambang batas stok menipis default.
+   - Manajemen pengguna: tambah user baru, ubah role (admin/staff),
+     aktifkan/nonaktifkan akun.
+   - Admin tidak bisa menonaktifkan akunnya sendiri (pencegahan
+     terkunci dari sistem sendiri).
+
+
+====================================================================
+8. HAK AKSES PENGGUNA (ROLE-BASED ACCESS CONTROL)
+====================================================================
+
+  Fitur                    Admin/Owner        Staff
+  ------------------------ ------------------ -------------------
+  Dashboard                 Ya                 Ya
+  Lihat Produk               Ya                 Ya
+  Tambah/Edit/Hapus Produk   Ya                 Tidak
+  Lihat & Tambah Stok        Ya                 Ya
+  Penjualan (Kasir)          Ya                 Ya
+  Closing Harian             Ya                 Ya
+  Laporan                    Ya                 Tidak
+  Ekspor Laporan Excel       Ya                 Tidak
+  Pengaturan Toko            Ya                 Tidak
+  Manajemen Pengguna         Ya                 Tidak
+
+
+====================================================================
+9. STRUKTUR DATABASE (8 TABEL)
+====================================================================
+
+1. users
+   id, name, email (unik), password_hash, role (admin/staff),
+   is_active, created_at, updated_at
+
+2. products
+   id, name, category, size, unit (botol/ml), price, stock,
+   low_stock_threshold, status (aktif/nonaktif), created_at, updated_at
+
+3. stock_movements  (riwayat pergerakan stok)
+   id, product_id (FK->products), type (masuk/penjualan/penyesuaian),
+   quantity, stock_before, stock_after, note, user_id (FK->users),
+   created_at
+
+4. sales  (transaksi penjualan)
+   id, transaction_number (unik), date, total, payment_method
+   (tunai/qris/transfer), user_id (FK->users), created_at
+
+5. sale_items  (item per transaksi)
+   id, sale_id (FK->sales), product_id (FK->products), quantity,
+   unit_price, subtotal
+
+6. daily_closings  (rekap closing harian)
+   id, closing_date (unik), total_transactions, total_items_sold,
+   total_revenue, status (terbuka/ditutup), note,
+   closed_by (FK->users), created_at
+
+7. daily_closing_items  (detail rekonsiliasi stok per produk saat closing)
+   id, closing_id (FK->daily_closings), product_id (FK->products),
+   opening_stock, stock_added, quantity_sold, system_stock,
+   actual_stock, difference, note
+
+8. settings  (identitas & konfigurasi toko)
+   id, store_name, owner_name, address, phone, currency,
+   default_low_stock_threshold
+
+Relasi utama: products <-1:N- stock_movements, products <-1:N- sale_items,
+sales <-1:N- sale_items, daily_closings <-1:N- daily_closing_items,
+users <-1:N- stock_movements/sales/daily_closings (siapa yang input).
+
+
+====================================================================
+10. KEAMANAN SISTEM
+====================================================================
+
+- Autentikasi berbasis JWT (JSON Web Token), masa berlaku token 12 jam.
+- Password pengguna di-hash dengan bcrypt (10 salt rounds) — password
+  asli tidak pernah disimpan di database.
+- Middleware requireAuth memverifikasi token di setiap endpoint API
+  yang butuh login.
+- Middleware requireRole('admin') membatasi endpoint sensitif (produk
+  create/update/delete, laporan, ekspor Excel, pengaturan, manajemen
+  pengguna) hanya untuk role admin.
+- Validasi input dilakukan di layer backend (service), bukan hanya di
+  frontend, sehingga tetap aman walau request dikirim langsung tanpa
+  lewat antarmuka.
+- Transaksi database (DB transaction + row locking) dipakai pada
+  proses kritikal seperti penjualan dan closing harian, agar stok
+  tidak bisa menjadi negatif atau tercatat ganda saat diakses
+  bersamaan (concurrent).
+
+
+====================================================================
+11. AKUN DEMO
+====================================================================
+
+  Peran         Email                       Password
+  ------------- --------------------------- -----------
+  Owner/Admin   admin@globalparfum.id       admin123
+  Staff         staff@globalparfum.id       staff123
+
+
+====================================================================
+12. CARA MENJALANKAN APLIKASI (RINGKAS)
+====================================================================
+
+1. Nyalakan database   : docker compose up -d
+2. Nyalakan backend    : cd server && npm install && npm run dev
+                          -> berjalan di http://localhost:4000
+3. Nyalakan frontend   : cd client && npm install && npm run dev
+                          -> berjalan di http://localhost:5173
+4. Buka browser ke http://localhost:5173 dan login.
+
+
+====================================================================
+13. POTENSI PENGEMBANGAN LANJUTAN (untuk slide "Kesimpulan & Saran")
+====================================================================
+
+- Notifikasi otomatis (misal WhatsApp/email) saat stok produk menipis.
+- Dukungan multi-cabang/multi-toko dalam satu sistem.
+- Grafik & analitik laporan yang lebih lengkap (per kategori produk,
+  per metode pembayaran, dsb).
+- Riwayat/log audit perubahan data yang lebih rinci.
+- Aplikasi mobile (companion app) untuk kasir di lapangan.
+
+====================================================================
