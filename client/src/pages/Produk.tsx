@@ -10,16 +10,21 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { listProducts, createProduct, updateProduct, deleteProduct, type ProductInput } from '../services/products';
-import type { Product } from '../types';
+import type { Product, ProductUnit } from '../types';
 import { formatCurrency } from '../utils/format';
 
 const CATEGORIES = ['Parfum Refill', 'Parfum Botol', 'Bibit Parfum', 'Produk Pendukung'];
 const SIZES = ['10 ml', '30 ml', '50 ml', '100 ml'];
+const UNITS: { value: ProductUnit; label: string }[] = [
+  { value: 'botol', label: 'Botol' },
+  { value: 'ml', label: 'ml (eceran/decant)' },
+];
 
 const emptyForm: ProductInput = {
   name: '',
   category: CATEGORIES[0],
   size: SIZES[1],
+  unit: 'botol',
   price: 0,
   lowStockThreshold: 5,
 };
@@ -79,6 +84,7 @@ export default function Produk() {
       name: product.name,
       category: product.category,
       size: product.size,
+      unit: product.unit,
       price: product.price,
       lowStockThreshold: product.lowStockThreshold,
     });
@@ -183,9 +189,13 @@ export default function Produk() {
                   <td className="px-3.5 py-2.5 text-text">{p.name}</td>
                   <td className="px-3.5 py-2.5 text-text-muted">{p.category}</td>
                   <td className="px-3.5 py-2.5 text-text-muted font-mono">{p.size}</td>
-                  <td className="px-3.5 py-2.5 text-text font-mono tnum">{formatCurrency(p.price)}</td>
+                  <td className="px-3.5 py-2.5 text-text font-mono tnum">
+                    {formatCurrency(p.price)}
+                    <span className="text-text-faint"> /{p.unit}</span>
+                  </td>
                   <td className="px-3.5 py-2.5 font-mono tnum">
-                    <span className={p.stock <= p.lowStockThreshold ? 'text-warning' : 'text-text'}>{p.stock}</span>
+                    <span className={p.stock <= p.lowStockThreshold ? 'text-warning' : 'text-text'}>{p.stock}</span>{' '}
+                    <span className="text-text-faint">{p.unit}</span>
                   </td>
                   <td className="px-3.5 py-2.5">
                     <Badge tone={p.status === 'aktif' ? 'success' : 'neutral'}>
@@ -261,7 +271,16 @@ export default function Produk() {
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Harga (Rp)">
+            <FormField label="Satuan Jual">
+              <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value as ProductUnit })}>
+                {UNITS.map((u) => (
+                  <option key={u.value} value={u.value}>
+                    {u.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label={`Harga per ${form.unit} (Rp)`}>
               <Input
                 type="number"
                 min={0}
@@ -269,15 +288,15 @@ export default function Produk() {
                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
               />
             </FormField>
-            <FormField label="Batas Stok Menipis">
-              <Input
-                type="number"
-                min={0}
-                value={form.lowStockThreshold}
-                onChange={(e) => setForm({ ...form, lowStockThreshold: Number(e.target.value) })}
-              />
-            </FormField>
           </div>
+          <FormField label="Batas Stok Menipis">
+            <Input
+              type="number"
+              min={0}
+              value={form.lowStockThreshold}
+              onChange={(e) => setForm({ ...form, lowStockThreshold: Number(e.target.value) })}
+            />
+          </FormField>
         </div>
       </Modal>
     </div>

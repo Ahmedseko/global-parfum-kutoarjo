@@ -70,6 +70,7 @@ export async function getDashboardSummary() {
       name: p.name,
       category: p.category,
       size: p.size,
+      unit: p.unit,
       price: Number(p.price),
       stock: p.stock,
       lowStockThreshold: p.low_stock_threshold,

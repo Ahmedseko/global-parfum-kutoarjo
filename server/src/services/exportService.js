@@ -3,7 +3,7 @@ import { pool } from '../db/pool.js';
 
 export async function buildSalesExcel({ from, to }) {
   const [rows] = await pool.query(
-    `SELECT s.date, s.transaction_number, p.name AS product_name, p.category, p.size,
+    `SELECT s.date, s.transaction_number, p.name AS product_name, p.category, p.size, p.unit,
             si.quantity, si.unit_price, si.subtotal, s.payment_method
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
@@ -22,6 +22,7 @@ export async function buildSalesExcel({ from, to }) {
     { header: 'Produk', key: 'product', width: 28 },
     { header: 'Kategori', key: 'category', width: 18 },
     { header: 'Ukuran', key: 'size', width: 10 },
+    { header: 'Satuan', key: 'unit', width: 10 },
     { header: 'Jumlah', key: 'quantity', width: 10 },
     { header: 'Harga', key: 'price', width: 14 },
     { header: 'Subtotal', key: 'subtotal', width: 16 },
@@ -36,6 +37,7 @@ export async function buildSalesExcel({ from, to }) {
       product: row.product_name,
       category: row.category,
       size: row.size,
+      unit: row.unit,
       quantity: row.quantity,
       price: Number(row.unit_price),
       subtotal: Number(row.subtotal),

@@ -7,6 +7,7 @@ function mapProduct(row) {
     name: row.name,
     category: row.category,
     size: row.size,
+    unit: row.unit,
     price: Number(row.price),
     stock: row.stock,
     lowStockThreshold: row.low_stock_threshold,
@@ -26,7 +27,7 @@ export async function getProductById(id) {
   return rows[0] ? mapProduct(rows[0]) : null;
 }
 
-export async function createProduct({ name, category, size, price, lowStockThreshold }) {
+export async function createProduct({ name, category, size, unit, price, lowStockThreshold }) {
   if (!name?.trim() || !category?.trim() || !size?.trim()) {
     throw new AppError('Nama, kategori, dan ukuran produk wajib diisi.', 400);
   }
@@ -36,10 +37,14 @@ export async function createProduct({ name, category, size, price, lowStockThres
   if (lowStockThreshold != null && lowStockThreshold < 0) {
     throw new AppError('Batas stok menipis tidak boleh negatif.', 400);
   }
+  const productUnit = unit ?? 'botol';
+  if (!['botol', 'ml'].includes(productUnit)) {
+    throw new AppError('Satuan produk tidak valid.', 400);
+  }
 
   const [result] = await pool.query(
-    'INSERT INTO products (name, category, size, price, stock, low_stock_threshold, status) VALUES (?, ?, ?, ?, 0, ?, ?)',
-    [name.trim(), category.trim(), size.trim(), price, lowStockThreshold ?? 5, 'aktif'],
+    'INSERT INTO products (name, category, size, unit, price, stock, low_stock_threshold, status) VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
+    [name.trim(), category.trim(), size.trim(), productUnit, price, lowStockThreshold ?? 5, 'aktif'],
   );
 
   return getProductById(result.insertId);
@@ -55,6 +60,7 @@ export async function updateProduct(id, updates) {
     name: updates.name?.trim() || existing.name,
     category: updates.category?.trim() || existing.category,
     size: updates.size?.trim() || existing.size,
+    unit: updates.unit ?? existing.unit,
     price: updates.price != null ? updates.price : existing.price,
     lowStockThreshold: updates.lowStockThreshold != null ? updates.lowStockThreshold : existing.lowStockThreshold,
     status: updates.status ?? existing.status,
@@ -69,10 +75,13 @@ export async function updateProduct(id, updates) {
   if (!['aktif', 'nonaktif'].includes(next.status)) {
     throw new AppError('Status produk tidak valid.', 400);
   }
+  if (!['botol', 'ml'].includes(next.unit)) {
+    throw new AppError('Satuan produk tidak valid.', 400);
+  }
 
   await pool.query(
-    'UPDATE products SET name = ?, category = ?, size = ?, price = ?, low_stock_threshold = ?, status = ? WHERE id = ?',
-    [next.name, next.category, next.size, next.price, next.lowStockThreshold, next.status, id],
+    'UPDATE products SET name = ?, category = ?, size = ?, unit = ?, price = ?, low_stock_threshold = ?, status = ? WHERE id = ?',
+    [next.name, next.category, next.size, next.unit, next.price, next.lowStockThreshold, next.status, id],
   );
 
   return getProductById(id);

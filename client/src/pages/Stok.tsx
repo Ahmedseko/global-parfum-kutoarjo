@@ -147,7 +147,9 @@ export default function Stok() {
                   <tr key={p.id} className="hover:bg-white/[0.02] transition">
                     <td className="px-3.5 py-2.5 text-text">{p.name}</td>
                     <td className="px-3.5 py-2.5 text-text-muted">{p.category}</td>
-                    <td className="px-3.5 py-2.5 font-mono tnum text-text">{p.stock}</td>
+                    <td className="px-3.5 py-2.5 font-mono tnum text-text">
+                      {p.stock} <span className="text-text-faint">{p.unit}</span>
+                    </td>
                     <td className="px-3.5 py-2.5 font-mono tnum text-text-muted">{p.lowStockThreshold}</td>
                     <td className="px-3.5 py-2.5">
                       {low ? <Badge tone="warning">Menipis</Badge> : <Badge tone="success">Aman</Badge>}
@@ -183,22 +185,25 @@ export default function Stok() {
                   </td>
                 </tr>
               )}
-              {movements.map((m) => (
-                <tr key={m.id} className="hover:bg-white/[0.02] transition">
-                  <td className="px-3.5 py-2.5 text-text-muted">{formatDate(m.createdAt)}</td>
-                  <td className="px-3.5 py-2.5 text-text">{m.productName}</td>
-                  <td className="px-3.5 py-2.5">
-                    <Badge tone={typeTone[m.type].tone}>{typeTone[m.type].label}</Badge>
-                  </td>
-                  <td className={'px-3.5 py-2.5 font-mono tnum ' + (m.quantity < 0 ? 'text-danger' : 'text-success')}>
-                    {m.quantity > 0 ? '+' : ''}
-                    {m.quantity}
-                  </td>
-                  <td className="px-3.5 py-2.5 font-mono tnum text-text-muted">{m.stockBefore}</td>
-                  <td className="px-3.5 py-2.5 font-mono tnum text-text">{m.stockAfter}</td>
-                  <td className="px-3.5 py-2.5 text-text-faint">{m.note ?? '-'}</td>
-                </tr>
-              ))}
+              {movements.map((m) => {
+                const unit = products.find((p) => p.id === m.productId)?.unit ?? '';
+                return (
+                  <tr key={m.id} className="hover:bg-white/[0.02] transition">
+                    <td className="px-3.5 py-2.5 text-text-muted">{formatDate(m.createdAt)}</td>
+                    <td className="px-3.5 py-2.5 text-text">{m.productName}</td>
+                    <td className="px-3.5 py-2.5">
+                      <Badge tone={typeTone[m.type].tone}>{typeTone[m.type].label}</Badge>
+                    </td>
+                    <td className={'px-3.5 py-2.5 font-mono tnum ' + (m.quantity < 0 ? 'text-danger' : 'text-success')}>
+                      {m.quantity > 0 ? '+' : ''}
+                      {m.quantity} <span className="text-text-faint">{unit}</span>
+                    </td>
+                    <td className="px-3.5 py-2.5 font-mono tnum text-text-muted">{m.stockBefore}</td>
+                    <td className="px-3.5 py-2.5 font-mono tnum text-text">{m.stockAfter}</td>
+                    <td className="px-3.5 py-2.5 text-text-faint">{m.note ?? '-'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -241,7 +246,7 @@ export default function Stok() {
                       >
                         {activeProducts.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} ({p.size})
+                            {p.name} ({p.size}) · per {p.unit}
                           </option>
                         ))}
                       </Select>
@@ -258,16 +263,17 @@ export default function Stok() {
                       <Input
                         type="number"
                         min={1}
-                        placeholder="Jumlah"
+                        placeholder={product ? `Jumlah (${product.unit})` : 'Jumlah'}
                         value={line.quantity || ''}
                         onChange={(e) => updateLine(line.key, { quantity: Number(e.target.value) })}
-                        className="w-24 shrink-0"
+                        className="w-28 shrink-0"
                       />
                       {product && (
                         <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono tnum text-text-faint shrink-0">
                           <span>{product.stock}</span>
                           <ArrowRight size={11} />
                           <span className="text-text font-medium">{product.stock + (line.quantity || 0)}</span>
+                          <span>{product.unit}</span>
                         </div>
                       )}
                       <Input

@@ -9,12 +9,14 @@ export interface User {
 }
 
 export type ProductStatus = 'aktif' | 'nonaktif';
+export type ProductUnit = 'botol' | 'ml';
 
 export interface Product {
   id: number;
   name: string;
   category: string;
   size: string;
+  unit: ProductUnit;
   price: number;
   stock: number;
   lowStockThreshold: number;

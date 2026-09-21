@@ -121,7 +121,7 @@ export default function Penjualan() {
                   <div className="min-w-0">
                     <div className="text-sm text-text truncate">{p.name}</div>
                     <div className="text-[11px] text-text-faint font-mono">
-                      {formatCurrency(p.price)} &middot; Stok {p.stock}
+                      {formatCurrency(p.price)}/{p.unit} &middot; Stok {p.stock} {p.unit}
                     </div>
                   </div>
                   <Button
@@ -187,7 +187,9 @@ export default function Penjualan() {
                       >
                         <Minus size={12} />
                       </button>
-                      <span className="w-6 text-center text-sm font-mono tnum">{line.quantity}</span>
+                      <span className="w-6 text-center text-sm font-mono tnum" title={line.product.unit}>
+                        {line.quantity}
+                      </span>
                       <button
                         onClick={() => changeQty(line.product.id, 1)}
                         disabled={line.quantity >= line.product.stock}

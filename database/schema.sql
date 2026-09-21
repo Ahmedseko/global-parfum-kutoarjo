@@ -28,6 +28,7 @@ CREATE TABLE products (
   name VARCHAR(150) NOT NULL,
   category VARCHAR(100) NOT NULL,
   size VARCHAR(20) NOT NULL,
+  unit ENUM('botol', 'ml') NOT NULL DEFAULT 'botol',
   price DECIMAL(12, 2) NOT NULL,
   stock INT NOT NULL DEFAULT 0,
   low_stock_threshold INT NOT NULL DEFAULT 5,

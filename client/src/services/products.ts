@@ -1,10 +1,11 @@
 import { api } from './api';
-import type { Product } from '../types';
+import type { Product, ProductUnit } from '../types';
 
 export interface ProductInput {
   name: string;
   category: string;
   size: string;
+  unit: ProductUnit;
   price: number;
   lowStockThreshold: number;
 }
