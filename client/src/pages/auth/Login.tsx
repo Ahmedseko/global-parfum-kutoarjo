@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { SprayCan, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiRequestError } from '../../services/api';
 import { Input } from '../../components/ui/Input';
@@ -44,7 +44,7 @@ export default function Login() {
             <div>
               <div className="flex items-center gap-3 mb-8">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent/15 text-accent">
-                  <Sparkles size={18} />
+                  <SprayCan size={18} />
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-text">Global Parfum Kutoarjo</div>

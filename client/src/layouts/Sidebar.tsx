@@ -8,7 +8,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Sparkles,
+  SprayCan,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '../hooks/useAuth';
@@ -30,7 +30,7 @@ export function Sidebar() {
     <aside className="hidden lg:flex flex-col w-[240px] shrink-0 border-r border-border bg-surface">
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-border">
         <div className="flex items-center justify-center w-7 h-7 rounded-md bg-accent/15 text-accent">
-          <Sparkles size={15} />
+          <SprayCan size={15} />
         </div>
         <div className="leading-tight">
           <div className="text-[13px] font-semibold text-text">Global Parfum</div>
