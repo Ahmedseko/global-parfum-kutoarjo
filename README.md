@@ -186,6 +186,7 @@ Login → Dashboard → Produk → Stok → Penjualan → Closing Harian → Lap
 
 | Masalah | Solusi |
 | --- | --- |
+| Docker Desktop: **"Virtualization support not detected"** | Virtualisasi di laptop belum aktif. (1) Cek di Task Manager → Performance → CPU, lihat tulisan **Virtualization**. (2) Kalau *Disabled*, restart laptop, masuk BIOS (tekan F2/F10/Del/Esc saat booting), aktifkan **Intel VT-x / Virtualization Technology** (Intel) atau **SVM Mode** (AMD), simpan, restart. (3) Di Windows, buka *Turn Windows features on or off*, centang **Virtual Machine Platform** dan **Windows Subsystem for Linux**, restart. (4) Jalankan `wsl --update` di PowerShell (Administrator). (5) Buka Docker Desktop lagi, tunggu "Engine running". |
 | `Cannot connect to the Docker daemon` | Docker Desktop belum menyala / belum selesai loading. Buka aplikasi Docker Desktop, tunggu sampai ikonnya tidak animasi lagi, lalu coba lagi. |
 | Server error `ECONNREFUSED` ke database | Pastikan database sudah menyala: `docker compose ps` harus menunjukkan status "healthy". Kalau belum, jalankan `docker compose up -d`. |
 | `Error: listen EADDRINUSE` saat `npm run dev` | Port 4000 atau 5173 sudah dipakai proses lain (mungkin sisa proses sebelumnya yang belum ditutup). Tutup proses lama, atau restart komputer kalau bingung caranya. |
