@@ -14,7 +14,7 @@ import type { Product, ProductUnit } from '../types';
 import { formatCurrency } from '../utils/format';
 
 const CATEGORIES = ['Parfum Refill', 'Parfum Botol', 'Bibit Parfum', 'Produk Pendukung'];
-const SIZES = ['10 ml', '30 ml', '50 ml', '100 ml'];
+const SIZES = ['10 ml', '20 ml', '30 ml', '50 ml', '100 ml'];
 const UNITS: { value: ProductUnit; label: string }[] = [
   { value: 'botol', label: 'Botol' },
   { value: 'ml', label: 'ml (eceran/decant)' },
