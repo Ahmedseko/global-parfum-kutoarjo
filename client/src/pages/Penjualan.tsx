@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, ShoppingCart, FlaskConical, Package } from 'lucide-react';
+import { Plus, Search, ShoppingCart, FlaskConical, Package, Eye } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -184,11 +184,7 @@ export default function Penjualan() {
           ) : (
             <div className="divide-y divide-border max-h-64 overflow-y-auto">
               {todaySales.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setReceipt(s)}
-                  className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm text-left hover:bg-white/[0.03] transition"
-                >
+                <div key={s.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={clsx('text-text', s.status === 'batal' && 'line-through opacity-60')}>{s.transactionNumber}</span>
@@ -199,10 +195,16 @@ export default function Penjualan() {
                       {s.customerNote && <> &middot; {s.customerNote}</>}
                     </div>
                   </div>
-                  <span className={clsx('font-mono tnum text-text', s.status === 'batal' && 'line-through opacity-60')}>
-                    {formatCurrency(s.total)}
-                  </span>
-                </button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className={clsx('font-mono tnum text-text', s.status === 'batal' && 'line-through opacity-60')}>
+                      {formatCurrency(s.total)}
+                    </span>
+                    <Button size="sm" variant="secondary" onClick={() => setReceipt(s)}>
+                      <Eye size={13} />
+                      Detail
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           )}

@@ -24,22 +24,22 @@ function Row({ left, right, bold }: { left: string; right: string; bold?: boolea
 const dashed = { borderTop: '1px dashed #000', margin: '6px 0' } as const;
 
 // Dirender dengan gaya inline (hitam di atas putih) agar hasil cetak/PDF sama di semua printer.
-function ReceiptBody({ sale, store }: { sale: Sale; store: StoreInfo | null }) {
+function ReceiptBody({ sale, store, screen }: { sale: Sale; store: StoreInfo | null; screen?: boolean }) {
   return (
     <div
       style={{
         width: '100%',
-        maxWidth: '80mm',
+        maxWidth: screen ? 380 : '80mm',
         margin: '0 auto',
-        padding: 8,
+        padding: screen ? 20 : 8,
         background: '#fff',
         color: '#000',
-        fontSize: 12,
-        lineHeight: 1.4,
+        fontSize: screen ? 15 : 12,
+        lineHeight: 1.5,
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>{store?.storeName ?? 'Struk Penjualan'}</div>
+        <div style={{ fontSize: screen ? 19 : 15, fontWeight: 700 }}>{store?.storeName ?? 'Struk Penjualan'}</div>
         {store?.address && <div>{store.address}</div>}
         {store?.phone && <div>Telp. {store.phone}</div>}
       </div>
@@ -149,7 +149,7 @@ export function ReceiptModal({
         open
         onClose={close}
         title={`Struk ${sale.transactionNumber}`}
-        size="sm"
+        size="md"
         footer={
           <>
             {isAdmin && sale.status === 'selesai' && !cancelling && (
@@ -168,7 +168,7 @@ export function ReceiptModal({
         }
       >
         <div className="rounded-md overflow-hidden">
-          <ReceiptBody sale={sale} store={store} />
+          <ReceiptBody sale={sale} store={store} screen />
         </div>
         {cancelling && (
           <div className="mt-4 space-y-2 rounded-lg border border-danger/30 bg-danger/5 p-3">
