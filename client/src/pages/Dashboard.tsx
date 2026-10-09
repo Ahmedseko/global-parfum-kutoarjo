@@ -104,7 +104,7 @@ export default function Dashboard() {
                       {i === 0 ? <Trophy size={11} /> : i + 1}
                     </span>
                     <span className="flex-1 text-sm text-text truncate">{p.productName}</span>
-                    <span className="text-xs text-text-muted tnum font-mono">{p.quantity} terjual</span>
+                    <span className="text-xs text-text-muted tnum font-mono">{p.quantity} {p.unit} terjual</span>
                   </li>
                 ))}
               </ul>

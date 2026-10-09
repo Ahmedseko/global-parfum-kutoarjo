@@ -13,18 +13,24 @@ import { listProducts, createProduct, updateProduct, deleteProduct, type Product
 import type { Product, ProductUnit } from '../types';
 import { formatCurrency } from '../utils/format';
 
-const CATEGORIES = ['Parfum Refill', 'Parfum Botol', 'Bibit Parfum', 'Produk Pendukung'];
-const SIZES = ['10 ml', '20 ml', '30 ml', '50 ml', '100 ml'];
+const CATEGORIES = ['Parfum Refill', 'Botol Kosong', 'Parfum Botol', 'Bibit Parfum', 'Produk Pendukung'];
+const SIZES = ['10 ml', '20 ml', '25 ml', '30 ml', '50 ml', '100 ml']; // saran saja, ukuran bebas diketik admin
 const UNITS: { value: ProductUnit; label: string }[] = [
-  { value: 'botol', label: 'Botol' },
-  { value: 'ml', label: 'ml (eceran/decant)' },
+  { value: 'botol', label: 'Botol / pcs' },
+  { value: 'ml', label: 'ml (varian parfum curah)' },
 ];
+
+// Pilihan kategori otomatis menyetel satuan: refill = ml, botol kosong = pcs.
+const CATEGORY_DEFAULTS: Record<string, Partial<ProductInput>> = {
+  'Parfum Refill': { unit: 'ml', size: 'curah' },
+  'Botol Kosong': { unit: 'botol', size: '30 ml' },
+};
 
 const emptyForm: ProductInput = {
   name: '',
   category: CATEGORIES[0],
-  size: SIZES[1],
-  unit: 'botol',
+  size: 'curah',
+  unit: 'ml',
   price: 0,
   lowStockThreshold: 5,
 };
@@ -248,11 +254,11 @@ export default function Produk() {
       >
         <div className="space-y-3.5">
           <FormField label="Nama Produk">
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sauvage Inspired 30 ml" />
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Baccarat / Botol 30 ml" />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Kategori">
-              <Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value, ...CATEGORY_DEFAULTS[e.target.value] })}>
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -260,14 +266,18 @@ export default function Produk() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Ukuran">
-              <Select value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })}>
+            <FormField label={form.category === 'Botol Kosong' ? 'Ukuran Botol' : 'Ukuran'}>
+              <Input
+                list="size-options"
+                value={form.size}
+                onChange={(e) => setForm({ ...form, size: e.target.value })}
+                placeholder="mis. 25 ml"
+              />
+              <datalist id="size-options">
                 {SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
+                  <option key={s} value={s} />
                 ))}
-              </Select>
+              </datalist>
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-3">

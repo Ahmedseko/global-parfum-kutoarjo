@@ -105,7 +105,7 @@ export interface DashboardSummary {
   itemsSoldToday: number;
   lowStockCount: number;
   salesTrend: { date: string; revenue: number }[];
-  bestSellers: { productName: string; quantity: number }[];
+  bestSellers: { productName: string; unit: ProductUnit; quantity: number }[];
   recentSales: Sale[];
   lowStockProducts: Product[];
 }
@@ -114,7 +114,7 @@ export interface ReportSummary {
   totalTransactions: number;
   totalRevenue: number;
   totalItemsSold: number;
-  bestSellers: { productName: string; quantity: number; revenue: number }[];
+  bestSellers: { productName: string; unit: ProductUnit; quantity: number; revenue: number }[];
   salesTrend: { date: string; revenue: number }[];
   sales: Sale[];
 }

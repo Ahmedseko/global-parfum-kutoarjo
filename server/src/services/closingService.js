@@ -10,7 +10,7 @@ async function getTodaySalesTotals(conn, date) {
   );
   const [[itemTotals]] = await conn.query(
     `SELECT COALESCE(SUM(si.quantity), 0) AS total_items_sold
-     FROM sale_items si JOIN sales s ON s.id = si.sale_id
+     FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol'
      WHERE s.date = ?`,
     [date],
   );

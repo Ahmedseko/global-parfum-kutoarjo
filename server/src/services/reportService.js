@@ -16,18 +16,19 @@ async function getTrend(from, to) {
 
 async function getBestSellers(from, to, limit = 5) {
   const [rows] = await pool.query(
-    `SELECT p.name AS product_name, SUM(si.quantity) AS quantity, SUM(si.subtotal) AS revenue
+    `SELECT p.name AS product_name, p.unit AS unit, SUM(si.quantity) AS quantity, SUM(si.subtotal) AS revenue
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
      JOIN products p ON p.id = si.product_id
      WHERE s.date BETWEEN ? AND ?
-     GROUP BY si.product_id, p.name
-     ORDER BY quantity DESC
+     GROUP BY si.product_id, p.name, p.unit
+     ORDER BY revenue DESC
      LIMIT ?`,
     [from, to, limit],
   );
   return rows.map((r) => ({
     productName: r.product_name,
+    unit: r.unit,
     quantity: Number(r.quantity),
     revenue: Number(r.revenue),
   }));
@@ -43,7 +44,7 @@ export async function getDashboardSummary() {
   );
   const [[itemsToday]] = await pool.query(
     `SELECT COALESCE(SUM(si.quantity), 0) AS items_sold_today
-     FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.date = ?`,
+     FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol' WHERE s.date = ?`,
     [today],
   );
   const [[lowStock]] = await pool.query(
@@ -90,7 +91,7 @@ export async function getSalesReport({ from, to }) {
   );
   const [[itemTotals]] = await pool.query(
     `SELECT COALESCE(SUM(si.quantity), 0) AS total_items_sold
-     FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.date BETWEEN ? AND ?`,
+     FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol' WHERE s.date BETWEEN ? AND ?`,
     [range.from, range.to],
   );
 

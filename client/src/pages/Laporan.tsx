@@ -190,9 +190,10 @@ export default function Laporan() {
                         width={110}
                       />
                       <Tooltip
+                        formatter={(v) => formatCurrency(Number(v))}
                         contentStyle={{ background: '#15161a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12 }}
                       />
-                      <Bar dataKey="quantity" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={14} />
+                      <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={14} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

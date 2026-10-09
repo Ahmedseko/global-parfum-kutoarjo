@@ -16,6 +16,10 @@ interface CartLine {
   quantity: number;
 }
 
+// Parfum curah (ml) dan botol kosong dijual lewat panel "Racik Parfum", bukan daftar biasa.
+const isRacik = (p: Product) => p.unit === 'ml' || p.category === 'Botol Kosong';
+const bottleCapacity = (p: Product) => parseInt(p.size, 10) || 0;
+
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'tunai', label: 'Tunai' },
   { value: 'qris', label: 'QRIS' },
@@ -31,6 +35,9 @@ export default function Penjualan() {
   const [payment, setPayment] = useState<PaymentMethod>('tunai');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [variantId, setVariantId] = useState('');
+  const [bottleId, setBottleId] = useState('');
+  const [ml, setMl] = useState(0);
 
   function load() {
     listProducts().then((p) => setProducts(p.filter((prod) => prod.status === 'aktif')));
@@ -40,7 +47,7 @@ export default function Penjualan() {
   useEffect(load, []);
 
   const filteredProducts = useMemo(
-    () => products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())),
+    () => products.filter((p) => !isRacik(p) && p.name.toLowerCase().includes(search.toLowerCase())),
     [products, search],
   );
 
@@ -76,6 +83,39 @@ export default function Penjualan() {
         })
         .filter((l) => l.quantity > 0),
     );
+  }
+
+  const variants = products.filter((p) => p.unit === 'ml' && p.stock > 0);
+  const bottles = products.filter((p) => p.category === 'Botol Kosong' && p.stock > 0);
+  const variant = variants.find((p) => p.id === Number(variantId));
+  const bottle = bottles.find((p) => p.id === Number(bottleId));
+  const capacity = bottle ? bottleCapacity(bottle) : 0;
+  const mlAvailable = variant ? variant.stock - inCartQty(variant.id) : 0;
+  const bottleAvailable = bottle ? bottle.stock - inCartQty(bottle.id) : 0;
+  const racikTotal = variant && bottle && ml > 0 ? ml * variant.price + bottle.price : 0;
+  const racikError =
+    !variant || !bottle || ml <= 0
+      ? null
+      : ml > capacity
+        ? `Isi maksimal ${capacity} ml untuk botol ini.`
+        : ml > mlAvailable
+          ? `Stok ${variant.name} tersisa ${mlAvailable} ml.`
+          : bottleAvailable < 1
+            ? 'Stok botol habis.'
+            : null;
+  const canAddRacik = !!variant && !!bottle && ml > 0 && !racikError;
+
+  function addRacik() {
+    if (!variant || !bottle || !canAddRacik) return;
+    setError(null);
+    setCart((prev) => {
+      const bump = (lines: CartLine[], product: Product, qty: number) =>
+        lines.some((l) => l.product.id === product.id)
+          ? lines.map((l) => (l.product.id === product.id ? { ...l, quantity: l.quantity + qty } : l))
+          : [...lines, { product, quantity: qty }];
+      return bump(bump(prev, variant, ml), bottle, 1);
+    });
+    setMl(0);
   }
 
   function removeLine(productId: number) {
@@ -141,6 +181,73 @@ export default function Penjualan() {
 
         <Card className="overflow-hidden">
           <div className="px-3.5 py-2.5 border-b border-border text-xs font-medium text-text-faint uppercase tracking-wide">
+            Racik Parfum (per ml + botol)
+          </div>
+          <div className="p-3.5 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1.5">Varian</label>
+                <Select value={variantId} onChange={(e) => setVariantId(e.target.value)}>
+                  <option value="">Pilih varian</option>
+                  {variants.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} &middot; {formatCurrency(v.price)}/ml
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1.5">Botol</label>
+                <Select
+                  value={bottleId}
+                  onChange={(e) => {
+                    setBottleId(e.target.value);
+                    setMl(0);
+                  }}
+                >
+                  <option value="">Pilih botol</option>
+                  {bottles.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} &middot; {formatCurrency(b.price)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-muted mb-1.5">
+                  Isi (ml){capacity > 0 && <span className="text-text-faint"> maks {capacity}</span>}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={capacity || undefined}
+                  value={ml || ''}
+                  onChange={(e) => setMl(Math.floor(Number(e.target.value)))}
+                />
+              </div>
+            </div>
+            {racikError && <div className="text-[13px] text-danger">{racikError}</div>}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-text-muted">
+                {racikTotal > 0 ? (
+                  <>
+                    {ml} ml &times; {formatCurrency(variant!.price)} + botol {formatCurrency(bottle!.price)} ={' '}
+                    <strong className="text-text font-mono tnum">{formatCurrency(racikTotal)}</strong>
+                  </>
+                ) : (
+                  'Pilih varian, botol, dan isi.'
+                )}
+              </span>
+              <Button size="sm" disabled={!canAddRacik} onClick={addRacik}>
+                <Plus size={13} />
+                Tambah
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-border text-xs font-medium text-text-faint uppercase tracking-wide">
             Transaksi Hari Ini
           </div>
           {todaySales.length === 0 ? (
@@ -180,25 +287,31 @@ export default function Penjualan() {
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => changeQty(line.product.id, -1)}
-                        className="w-6 h-6 flex items-center justify-center rounded border border-border text-text-muted hover:text-text transition"
-                      >
-                        <Minus size={12} />
-                      </button>
-                      <span className="w-6 text-center text-sm font-mono tnum" title={line.product.unit}>
-                        {line.quantity}
+                    {line.product.unit === 'ml' ? (
+                      <span className="text-[11px] text-text-faint">
+                        {line.quantity} ml x {formatCurrency(line.product.price)}
                       </span>
-                      <button
-                        onClick={() => changeQty(line.product.id, 1)}
-                        disabled={line.quantity >= line.product.stock}
-                        className="w-6 h-6 flex items-center justify-center rounded border border-border text-text-muted hover:text-text transition disabled:opacity-40"
-                      >
-                        <Plus size={12} />
-                      </button>
-                      <span className="text-[11px] text-text-faint ml-1">x {formatCurrency(line.product.price)}</span>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => changeQty(line.product.id, -1)}
+                          className="w-6 h-6 flex items-center justify-center rounded border border-border text-text-muted hover:text-text transition"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="w-6 text-center text-sm font-mono tnum" title={line.product.unit}>
+                          {line.quantity}
+                        </span>
+                        <button
+                          onClick={() => changeQty(line.product.id, 1)}
+                          disabled={line.quantity >= line.product.stock}
+                          className="w-6 h-6 flex items-center justify-center rounded border border-border text-text-muted hover:text-text transition disabled:opacity-40"
+                        >
+                          <Plus size={12} />
+                        </button>
+                        <span className="text-[11px] text-text-faint ml-1">x {formatCurrency(line.product.price)}</span>
+                      </div>
+                    )}
                     <span className="text-sm font-mono tnum text-text">
                       {formatCurrency(line.product.price * line.quantity)}
                     </span>
