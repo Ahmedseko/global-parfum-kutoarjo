@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; /* angka tetap rata lewat tabular-nums */
 
   /* Surfaces */
   --color-bg: #08090a;
@@ -71,4 +71,8 @@ body {
   body {
     background: #ffffff;
   }
+}
+
+.font-mono {
+  font-variant-numeric: tabular-nums;
 }
