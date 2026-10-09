@@ -3,6 +3,7 @@ import { Plus, Search, Pencil, Trash2, Tags } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Select, FormField } from '../components/ui/Input';
+import { SizeField } from '../components/SizeField';
 import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
@@ -15,7 +16,7 @@ import {
   type CatalogInput,
 } from '../services/catalog';
 import type { CatalogItem, ProductUnit } from '../types';
-import { CATEGORIES, CATEGORY_DEFAULTS, SIZES, UNITS } from '../utils/productOptions';
+import { CATEGORIES, CATEGORY_DEFAULTS, UNITS } from '../utils/productOptions';
 import { formatCurrency } from '../utils/format';
 
 const emptyForm: CatalogInput = { name: '', category: CATEGORIES[0], size: 'curah', unit: 'ml', price: 0 };
@@ -215,12 +216,7 @@ export default function Katalog() {
               </Select>
             </FormField>
             <FormField label="Ukuran">
-              <Input list="catalog-size-options" value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} />
-              <datalist id="catalog-size-options">
-                {SIZES.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
+              <SizeField category={form.category} value={form.size} onChange={(size) => setForm({ ...form, size })} />
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-3">

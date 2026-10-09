@@ -1,7 +1,8 @@
 import type { ProductUnit } from '../types';
 
 export const CATEGORIES = ['Parfum Refill', 'Botol Kosong', 'Parfum Botol', 'Bibit Parfum', 'Produk Pendukung'];
-export const SIZES = ['10 ml', '20 ml', '25 ml', '30 ml', '50 ml', '100 ml']; // saran saja, ukuran bebas diketik admin
+// Ukuran botol: kelipatan 5 ml, 5-100.
+export const BOTTLE_SIZES = Array.from({ length: 20 }, (_, i) => `${(i + 1) * 5} ml`);
 export const UNITS: { value: ProductUnit; label: string }[] = [
   { value: 'botol', label: 'Botol / pcs' },
   { value: 'ml', label: 'ml (varian parfum curah)' },

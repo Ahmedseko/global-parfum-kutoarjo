@@ -1,5 +1,6 @@
 import { pool } from '../db/pool.js';
 import { AppError } from '../utils/AppError.js';
+import { assertBottleSize } from '../utils/bottleSize.js';
 
 function mapProduct(row) {
   return {
@@ -32,6 +33,7 @@ export async function createProduct({ name, category, size, unit, price, lowStoc
   if (!name?.trim() || !category?.trim() || !size?.trim()) {
     throw new AppError('Nama, kategori, dan ukuran produk wajib diisi.', 400);
   }
+  assertBottleSize(category.trim(), size.trim());
   if (!(price > 0)) {
     throw new AppError('Harga produk harus lebih dari nol.', 400);
   }
@@ -67,6 +69,7 @@ export async function updateProduct(id, updates) {
     status: updates.status ?? existing.status,
   };
 
+  assertBottleSize(next.category, next.size);
   if (!(next.price > 0)) {
     throw new AppError('Harga produk harus lebih dari nol.', 400);
   }

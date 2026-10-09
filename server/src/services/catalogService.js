@@ -1,5 +1,6 @@
 import { pool } from '../db/pool.js';
 import { AppError } from '../utils/AppError.js';
+import { assertBottleSize } from '../utils/bottleSize.js';
 
 const SELECT_CATALOG = `
   SELECT c.*, (SELECT COUNT(*) FROM products p WHERE p.catalog_id = c.id) AS linked_count
@@ -22,6 +23,7 @@ function validate({ name, category, size, unit, price }) {
   if (!name?.trim() || !category?.trim() || !size?.trim()) {
     throw new AppError('Nama, kategori, dan ukuran wajib diisi.', 400);
   }
+  assertBottleSize(category.trim(), size.trim());
   if (!['botol', 'ml'].includes(unit)) {
     throw new AppError('Satuan tidak valid.', 400);
   }

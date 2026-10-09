@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input, Select, FormField } from '../components/ui/Input';
+import { SizeField } from '../components/SizeField';
 import { Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
@@ -12,7 +13,7 @@ import { useAuth } from '../hooks/useAuth';
 import { listProducts, createProduct, updateProduct, deleteProduct, type ProductInput } from '../services/products';
 import type { Product, ProductUnit } from '../types';
 import { formatCurrency } from '../utils/format';
-import { CATEGORIES, CATEGORY_DEFAULTS, SIZES, UNITS } from '../utils/productOptions';
+import { CATEGORIES, CATEGORY_DEFAULTS, UNITS } from '../utils/productOptions';
 import { listCatalog } from '../services/catalog';
 import type { CatalogItem } from '../types';
 
@@ -285,17 +286,7 @@ export default function Produk() {
               </Select>
             </FormField>
             <FormField label={form.category === 'Botol Kosong' ? 'Ukuran Botol' : 'Ukuran'}>
-              <Input
-                list="size-options"
-                value={form.size}
-                onChange={(e) => setForm({ ...form, size: e.target.value })}
-                placeholder="mis. 25 ml"
-              />
-              <datalist id="size-options">
-                {SIZES.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
+              <SizeField category={form.category} value={form.size} onChange={(size) => setForm({ ...form, size })} />
             </FormField>
           </div>
           <div className="grid grid-cols-2 gap-3">
