@@ -1,43 +1,42 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Minus, Trash2, ShoppingCart, Search } from 'lucide-react';
+import { Plus, Search, ShoppingCart, FlaskConical, Package } from 'lucide-react';
+import { clsx } from 'clsx';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Input, Select } from '../components/ui/Input';
+import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
+import { RacikPanel } from '../components/penjualan/RacikPanel';
+import { CartPanel } from '../components/penjualan/CartPanel';
+import { ReceiptModal } from '../components/penjualan/Receipt';
+import { type CartLine, available, isRacik, maxMl, maxQty } from '../components/penjualan/cart';
+import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { listProducts } from '../services/products';
-import { listSales, createSale } from '../services/sales';
-import type { PaymentMethod, Product, Sale } from '../types';
+import { listSales, createSale, type SaleInput } from '../services/sales';
+import { getStoreInfo } from '../services/settings';
 import { ApiRequestError } from '../services/api';
+import type { Product, Sale, StoreInfo } from '../types';
 import { formatCurrency, formatDateTime, todayIso } from '../utils/format';
 
-interface CartLine {
-  product: Product;
-  quantity: number;
-}
+type Tab = 'racik' | 'produk';
 
-// Parfum curah (ml) dan botol kosong dijual lewat panel "Racik Parfum", bukan daftar biasa.
-const isRacik = (p: Product) => p.unit === 'ml' || p.category === 'Botol Kosong';
-const bottleCapacity = (p: Product) => parseInt(p.size, 10) || 0;
-
-const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: 'tunai', label: 'Tunai' },
-  { value: 'qris', label: 'QRIS' },
-  { value: 'transfer', label: 'Transfer' },
-];
+// crypto.randomUUID butuh HTTPS; id baris keranjang cukup penghitung biasa.
+let lineSeq = 0;
+const newId = () => `line-${++lineSeq}`;
 
 export default function Penjualan() {
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [store, setStore] = useState<StoreInfo | null>(null);
+  const [tab, setTab] = useState<Tab>('racik');
   const [search, setSearch] = useState('');
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [payment, setPayment] = useState<PaymentMethod>('tunai');
+  const [lines, setLines] = useState<CartLine[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [variantId, setVariantId] = useState('');
-  const [bottleId, setBottleId] = useState('');
-  const [ml, setMl] = useState(0);
+  const [receipt, setReceipt] = useState<Sale | null>(null);
 
   function load() {
     listProducts().then((p) => setProducts(p.filter((prod) => prod.status === 'aktif')));
@@ -45,205 +44,135 @@ export default function Penjualan() {
   }
 
   useEffect(load, []);
+  useEffect(() => {
+    getStoreInfo().then(setStore).catch(() => setStore(null));
+  }, []);
 
-  const filteredProducts = useMemo(
+  const otherProducts = useMemo(
     () => products.filter((p) => !isRacik(p) && p.name.toLowerCase().includes(search.toLowerCase())),
     [products, search],
   );
-
   const todaySales = useMemo(() => sales.filter((s) => s.date === todayIso()), [sales]);
 
-  const total = cart.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
-
-  function inCartQty(productId: number) {
-    return cart.find((l) => l.product.id === productId)?.quantity ?? 0;
-  }
-
-  function addToCart(product: Product) {
+  function addRacik(variant: Product, bottle: Product, ml: number) {
     setError(null);
-    setCart((prev) => {
-      const existing = prev.find((l) => l.product.id === product.id);
-      const nextQty = (existing?.quantity ?? 0) + 1;
-      if (nextQty > product.stock) return prev;
-      if (existing) {
-        return prev.map((l) => (l.product.id === product.id ? { ...l, quantity: nextQty } : l));
+    setLines((prev) => {
+      const same = prev.find((l) => l.kind === 'racik' && l.variant.id === variant.id && l.bottle.id === bottle.id && l.ml === ml);
+      if (same) {
+        return prev.map((l) => (l.id === same.id && l.kind === 'racik' ? { ...l, qty: l.qty + 1 } : l));
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { kind: 'racik', id: newId(), variant, bottle, ml, qty: 1 }];
     });
   }
 
-  function changeQty(productId: number, delta: number) {
+  function addProduct(product: Product) {
     setError(null);
-    setCart((prev) =>
+    setLines((prev) => {
+      if (available(product, prev) < 1) return prev;
+      const existing = prev.find((l) => l.kind === 'produk' && l.product.id === product.id);
+      if (existing) return prev.map((l) => (l.id === existing.id ? { ...l, qty: l.qty + 1 } : l));
+      return [...prev, { kind: 'produk', id: newId(), product, qty: 1 }];
+    });
+  }
+
+  // Jumlah dibatasi stok; 0 berarti baris dihapus.
+  function setQty(id: string, qty: number) {
+    setError(null);
+    setLines((prev) =>
       prev
-        .map((l) => {
-          if (l.product.id !== productId) return l;
-          const nextQty = Math.min(l.product.stock, Math.max(0, l.quantity + delta));
-          return { ...l, quantity: nextQty };
-        })
-        .filter((l) => l.quantity > 0),
+        .map((l) => (l.id === id ? { ...l, qty: Math.min(Math.max(0, qty), maxQty(l, prev)) } : l))
+        .filter((l) => l.qty > 0),
     );
   }
 
-  const variants = products.filter((p) => p.unit === 'ml' && p.stock > 0);
-  const bottles = products.filter((p) => p.category === 'Botol Kosong' && p.stock > 0);
-  const variant = variants.find((p) => p.id === Number(variantId));
-  const bottle = bottles.find((p) => p.id === Number(bottleId));
-  const capacity = bottle ? bottleCapacity(bottle) : 0;
-  const mlAvailable = variant ? variant.stock - inCartQty(variant.id) : 0;
-  const bottleAvailable = bottle ? bottle.stock - inCartQty(bottle.id) : 0;
-  const racikTotal = variant && bottle && ml > 0 ? ml * variant.price + bottle.price : 0;
-  const racikError =
-    !variant || !bottle || ml <= 0
-      ? null
-      : ml > capacity
-        ? `Isi maksimal ${capacity} ml untuk botol ini.`
-        : ml > mlAvailable
-          ? `Stok ${variant.name} tersisa ${mlAvailable} ml.`
-          : bottleAvailable < 1
-            ? 'Stok botol habis.'
-            : null;
-  const canAddRacik = !!variant && !!bottle && ml > 0 && !racikError;
-
-  function addRacik() {
-    if (!variant || !bottle || !canAddRacik) return;
+  function setMl(id: string, ml: number) {
     setError(null);
-    setCart((prev) => {
-      const bump = (lines: CartLine[], product: Product, qty: number) =>
-        lines.some((l) => l.product.id === product.id)
-          ? lines.map((l) => (l.product.id === product.id ? { ...l, quantity: l.quantity + qty } : l))
-          : [...lines, { product, quantity: qty }];
-      return bump(bump(prev, variant, ml), bottle, 1);
-    });
-    setMl(0);
+    setLines((prev) =>
+      prev.map((l) => (l.id === id && l.kind === 'racik' ? { ...l, ml: Math.min(Math.max(1, ml || 1), maxMl(l, prev)) } : l)),
+    );
   }
 
-  function removeLine(productId: number) {
-    setCart((prev) => prev.filter((l) => l.product.id !== productId));
+  function removeLine(id: string) {
+    setLines((prev) => prev.filter((l) => l.id !== id));
   }
 
-  async function handleSubmit() {
-    if (cart.length === 0) return;
+  async function handleSubmit(input: SaleInput): Promise<boolean> {
+    if (lines.length === 0) return false;
     setSaving(true);
     setError(null);
     try {
-      await createSale({
-        items: cart.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
-        paymentMethod: payment,
-      });
+      const sale = await createSale(input);
       showToast('Penjualan berhasil disimpan.');
-      setCart([]);
+      setLines([]);
+      setReceipt(sale);
       load();
+      return true;
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Stok tidak mencukupi.');
+      setError(err instanceof ApiRequestError ? err.message : 'Gagal menyimpan penjualan.');
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
+  const tabs: { id: Tab; label: string; icon: typeof Package }[] = [
+    { id: 'racik', label: 'Racik Parfum', icon: FlaskConical },
+    { id: 'produk', label: 'Produk Lain', icon: Package },
+  ];
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
       <div className="xl:col-span-3 space-y-4">
         <Card className="overflow-hidden">
-          <div className="p-3 border-b border-border">
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" />
-              <Input placeholder="Cari produk..." className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
-          </div>
-          <div className="max-h-[480px] overflow-y-auto divide-y divide-border">
-            {filteredProducts.length === 0 && <EmptyState message="Produk tidak ditemukan." />}
-            {filteredProducts.map((p) => {
-              const qty = inCartQty(p.id);
-              const outOfStock = p.stock === 0;
-              return (
-                <div key={p.id} className="flex items-center justify-between px-3.5 py-2.5">
-                  <div className="min-w-0">
-                    <div className="text-sm text-text truncate">{p.name}</div>
-                    <div className="text-[11px] text-text-faint font-mono">
-                      {formatCurrency(p.price)}/{p.unit} &middot; Stok {p.stock} {p.unit}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant={qty > 0 ? 'secondary' : 'primary'}
-                    disabled={outOfStock || qty >= p.stock}
-                    onClick={() => addToCart(p)}
-                  >
-                    <Plus size={13} />
-                    {qty > 0 ? qty : 'Tambah'}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <div className="px-3.5 py-2.5 border-b border-border text-xs font-medium text-text-faint uppercase tracking-wide">
-            Racik Parfum (per ml + botol)
-          </div>
-          <div className="p-3.5 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-text-muted mb-1.5">Varian</label>
-                <Select value={variantId} onChange={(e) => setVariantId(e.target.value)}>
-                  <option value="">Pilih varian</option>
-                  {variants.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name} &middot; {formatCurrency(v.price)}/ml
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-muted mb-1.5">Botol</label>
-                <Select
-                  value={bottleId}
-                  onChange={(e) => {
-                    setBottleId(e.target.value);
-                    setMl(0);
-                  }}
-                >
-                  <option value="">Pilih botol</option>
-                  {bottles.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} &middot; {formatCurrency(b.price)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-muted mb-1.5">
-                  Isi (ml){capacity > 0 && <span className="text-text-faint"> maks {capacity}</span>}
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={capacity || undefined}
-                  value={ml || ''}
-                  onChange={(e) => setMl(Math.floor(Number(e.target.value)))}
-                />
-              </div>
-            </div>
-            {racikError && <div className="text-[13px] text-danger">{racikError}</div>}
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-text-muted">
-                {racikTotal > 0 ? (
-                  <>
-                    {ml} ml &times; {formatCurrency(variant!.price)} + botol {formatCurrency(bottle!.price)} ={' '}
-                    <strong className="text-text font-mono tnum">{formatCurrency(racikTotal)}</strong>
-                  </>
-                ) : (
-                  'Pilih varian, botol, dan isi.'
+          <div className="flex border-b border-border">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={clsx(
+                  'flex items-center gap-2 px-4 h-11 text-sm font-medium border-b-2 -mb-px transition',
+                  tab === id ? 'border-accent text-text' : 'border-transparent text-text-muted hover:text-text',
                 )}
-              </span>
-              <Button size="sm" disabled={!canAddRacik} onClick={addRacik}>
-                <Plus size={13} />
-                Tambah
-              </Button>
-            </div>
+              >
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
           </div>
+
+          {tab === 'racik' ? (
+            <RacikPanel products={products} lines={lines} onAdd={addRacik} />
+          ) : (
+            <>
+              <div className="p-3 border-b border-border">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" />
+                  <Input placeholder="Cari produk..." className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+              </div>
+              <div className="max-h-[420px] overflow-y-auto divide-y divide-border">
+                {otherProducts.length === 0 && <EmptyState message="Produk tidak ditemukan." />}
+                {otherProducts.map((p) => {
+                  const left = available(p, lines);
+                  const inCart = p.stock - left;
+                  return (
+                    <div key={p.id} className="flex items-center justify-between px-3.5 py-2.5">
+                      <div className="min-w-0">
+                        <div className="text-sm text-text truncate">{p.name}</div>
+                        <div className="text-[11px] text-text-faint font-mono">
+                          {formatCurrency(p.price)}/{p.unit} &middot; Stok {p.stock} {p.unit}
+                        </div>
+                      </div>
+                      <Button size="sm" variant={inCart > 0 ? 'secondary' : 'primary'} disabled={left < 1} onClick={() => addProduct(p)}>
+                        <Plus size={13} />
+                        {inCart > 0 ? inCart : 'Tambah'}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </Card>
 
         <Card className="overflow-hidden">
@@ -253,15 +182,27 @@ export default function Penjualan() {
           {todaySales.length === 0 ? (
             <EmptyState icon={ShoppingCart} message="Belum ada transaksi hari ini." />
           ) : (
-            <div className="divide-y divide-border max-h-56 overflow-y-auto">
+            <div className="divide-y divide-border max-h-64 overflow-y-auto">
               {todaySales.map((s) => (
-                <div key={s.id} className="flex items-center justify-between px-3.5 py-2.5 text-sm">
-                  <div>
-                    <div className="text-text">{s.transactionNumber}</div>
-                    <div className="text-[11px] text-text-faint">{formatDateTime(s.createdAt)}</div>
+                <button
+                  key={s.id}
+                  onClick={() => setReceipt(s)}
+                  className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm text-left hover:bg-white/[0.03] transition"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={clsx('text-text', s.status === 'batal' && 'line-through opacity-60')}>{s.transactionNumber}</span>
+                      {s.status === 'batal' && <Badge tone="danger">Batal</Badge>}
+                    </div>
+                    <div className="text-[11px] text-text-faint truncate">
+                      {formatDateTime(s.createdAt)} &middot; {s.items.length} item
+                      {s.customerNote && <> &middot; {s.customerNote}</>}
+                    </div>
                   </div>
-                  <span className="font-mono tnum text-text">{formatCurrency(s.total)}</span>
-                </div>
+                  <span className={clsx('font-mono tnum text-text', s.status === 'batal' && 'line-through opacity-60')}>
+                    {formatCurrency(s.total)}
+                  </span>
+                </button>
               ))}
             </div>
           )}
@@ -269,85 +210,10 @@ export default function Penjualan() {
       </div>
 
       <div className="xl:col-span-2">
-        <Card className="sticky top-0 overflow-hidden">
-          <div className="px-3.5 py-2.5 border-b border-border text-xs font-medium text-text-faint uppercase tracking-wide">
-            Keranjang
-          </div>
-
-          {cart.length === 0 ? (
-            <EmptyState icon={ShoppingCart} message="Belum ada produk dipilih." />
-          ) : (
-            <div className="divide-y divide-border">
-              {cart.map((line) => (
-                <div key={line.product.id} className="px-3.5 py-2.5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm text-text truncate">{line.product.name}</span>
-                    <button onClick={() => removeLine(line.product.id)} className="text-text-faint hover:text-danger transition p-0.5">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    {line.product.unit === 'ml' ? (
-                      <span className="text-[11px] text-text-faint">
-                        {line.quantity} ml x {formatCurrency(line.product.price)}
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => changeQty(line.product.id, -1)}
-                          className="w-6 h-6 flex items-center justify-center rounded border border-border text-text-muted hover:text-text transition"
-                        >
-                          <Minus size={12} />
-                        </button>
-                        <span className="w-6 text-center text-sm font-mono tnum" title={line.product.unit}>
-                          {line.quantity}
-                        </span>
-                        <button
-                          onClick={() => changeQty(line.product.id, 1)}
-                          disabled={line.quantity >= line.product.stock}
-                          className="w-6 h-6 flex items-center justify-center rounded border border-border text-text-muted hover:text-text transition disabled:opacity-40"
-                        >
-                          <Plus size={12} />
-                        </button>
-                        <span className="text-[11px] text-text-faint ml-1">x {formatCurrency(line.product.price)}</span>
-                      </div>
-                    )}
-                    <span className="text-sm font-mono tnum text-text">
-                      {formatCurrency(line.product.price * line.quantity)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="p-3.5 border-t border-border space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-text-muted">Total</span>
-              <span className="text-lg font-semibold font-mono tnum text-text">{formatCurrency(total)}</span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-text-muted mb-1.5">Metode Pembayaran</label>
-              <Select value={payment} onChange={(e) => setPayment(e.target.value as PaymentMethod)}>
-                {PAYMENT_METHODS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {error && (
-              <div className="text-[13px] text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{error}</div>
-            )}
-
-            <Button className="w-full" disabled={cart.length === 0 || saving} onClick={handleSubmit}>
-              {saving ? 'Menyimpan...' : 'Simpan Penjualan'}
-            </Button>
-          </div>
-        </Card>
+        <CartPanel lines={lines} saving={saving} error={error} onQty={setQty} onMl={setMl} onRemove={removeLine} onSubmit={handleSubmit} />
       </div>
+
+      <ReceiptModal sale={receipt} store={store} isAdmin={user?.role === 'admin'} onClose={() => setReceipt(null)} onChanged={load} />
     </div>
   );
 }

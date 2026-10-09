@@ -87,10 +87,18 @@ CREATE TABLE sales (
   transaction_number VARCHAR(30) NOT NULL UNIQUE,
   date DATE NOT NULL,
   total DECIMAL(12, 2) NOT NULL,
+  discount DECIMAL(12, 2) NOT NULL DEFAULT 0,
   payment_method ENUM('tunai', 'qris', 'transfer') NOT NULL DEFAULT 'tunai',
+  customer_note VARCHAR(255) NULL,
+  amount_paid DECIMAL(12, 2) NULL,
+  status ENUM('selesai', 'batal') NOT NULL DEFAULT 'selesai',
+  cancel_reason VARCHAR(255) NULL,
+  cancelled_at TIMESTAMP NULL,
+  cancelled_by INT UNSIGNED NULL,
   user_id INT UNSIGNED NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_sales_user FOREIGN KEY (user_id) REFERENCES users (id)
+  CONSTRAINT fk_sales_user FOREIGN KEY (user_id) REFERENCES users (id),
+  CONSTRAINT fk_sales_cancelled_by FOREIGN KEY (cancelled_by) REFERENCES users (id)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_sales_date ON sales (date);

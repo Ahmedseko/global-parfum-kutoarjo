@@ -8,7 +8,7 @@ export async function buildSalesExcel({ from, to }) {
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
      JOIN products p ON p.id = si.product_id
-     WHERE s.date BETWEEN ? AND ?
+     WHERE s.status = 'selesai' AND s.date BETWEEN ? AND ?
      ORDER BY s.date ASC, s.transaction_number ASC`,
     [from, to],
   );

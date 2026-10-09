@@ -5,13 +5,13 @@ import { todayIso } from '../utils/date.js';
 async function getTodaySalesTotals(conn, date) {
   const [[totals]] = await conn.query(
     `SELECT COUNT(*) AS total_transactions, COALESCE(SUM(total), 0) AS total_revenue
-     FROM sales WHERE date = ?`,
+     FROM sales WHERE status = 'selesai' AND date = ?`,
     [date],
   );
   const [[itemTotals]] = await conn.query(
     `SELECT COALESCE(SUM(si.quantity), 0) AS total_items_sold
      FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol'
-     WHERE s.date = ?`,
+     WHERE s.status = 'selesai' AND s.date = ?`,
     [date],
   );
   return {
@@ -36,7 +36,7 @@ async function computeProductStockLines(conn, date) {
     if (m.type === 'masuk') {
       addedByProduct.set(m.product_id, (addedByProduct.get(m.product_id) ?? 0) + m.quantity);
     } else if (m.type === 'penjualan') {
-      soldByProduct.set(m.product_id, (soldByProduct.get(m.product_id) ?? 0) + Math.abs(m.quantity));
+      soldByProduct.set(m.product_id, (soldByProduct.get(m.product_id) ?? 0) + -m.quantity);
     }
   }
 

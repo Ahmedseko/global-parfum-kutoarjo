@@ -35,5 +35,7 @@ export function formatDateTime(value: string | Date): string {
 }
 
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  // tanggal lokal (sama dengan server), bukan UTC
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

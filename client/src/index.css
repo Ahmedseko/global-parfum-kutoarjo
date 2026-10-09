@@ -76,3 +76,22 @@ body {
 .font-mono {
   font-variant-numeric: tabular-nums;
 }
+
+/* Struk: saat mencetak hanya salinan .print-only yang tampil (printer thermal / A4 / simpan PDF). */
+.print-only {
+  display: none;
+}
+@media print {
+  body.printing-receipt > div:not(.print-only) {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  @page {
+    margin: 4mm;
+  }
+}

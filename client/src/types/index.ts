@@ -57,6 +57,8 @@ export interface SaleItem {
   id: number;
   productId: number;
   productName: string;
+  productUnit: ProductUnit;
+  productSize: string;
   quantity: number;
   unitPrice: number;
   subtotal: number;
@@ -67,10 +69,25 @@ export interface Sale {
   transactionNumber: string;
   date: string;
   items: SaleItem[];
+  subtotal: number;
+  discount: number;
   total: number;
   paymentMethod: PaymentMethod;
+  customerNote: string | null;
+  amountPaid: number | null;
+  change: number | null;
+  status: 'selesai' | 'batal';
+  cancelReason: string | null;
+  cancelledAt: string | null;
+  cancelledBy: string | null;
   userName: string;
   createdAt: string;
+}
+
+export interface StoreInfo {
+  storeName: string;
+  address: string;
+  phone: string;
 }
 
 export interface DailyClosingItem {

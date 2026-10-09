@@ -5,7 +5,7 @@ import { todayIso, monthStartIso } from '../utils/date.js';
 async function getTrend(from, to) {
   const [rows] = await pool.query(
     `SELECT date, COALESCE(SUM(total), 0) AS revenue FROM sales
-     WHERE date BETWEEN ? AND ? GROUP BY date ORDER BY date ASC`,
+     WHERE status = 'selesai' AND date BETWEEN ? AND ? GROUP BY date ORDER BY date ASC`,
     [from, to],
   );
   return rows.map((r) => ({
@@ -20,7 +20,7 @@ async function getBestSellers(from, to, limit = 5) {
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
      JOIN products p ON p.id = si.product_id
-     WHERE s.date BETWEEN ? AND ?
+     WHERE s.status = 'selesai' AND s.date BETWEEN ? AND ?
      GROUP BY si.product_id, p.name, p.unit
      ORDER BY revenue DESC
      LIMIT ?`,
@@ -39,12 +39,12 @@ export async function getDashboardSummary() {
   const monthStart = monthStartIso();
 
   const [[todayTotals]] = await pool.query(
-    `SELECT COUNT(*) AS sales_today, COALESCE(SUM(total), 0) AS revenue_today FROM sales WHERE date = ?`,
+    `SELECT COUNT(*) AS sales_today, COALESCE(SUM(total), 0) AS revenue_today FROM sales WHERE status = 'selesai' AND date = ?`,
     [today],
   );
   const [[itemsToday]] = await pool.query(
     `SELECT COALESCE(SUM(si.quantity), 0) AS items_sold_today
-     FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol' WHERE s.date = ?`,
+     FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol' WHERE s.status = 'selesai' AND s.date = ?`,
     [today],
   );
   const [[lowStock]] = await pool.query(
@@ -86,12 +86,12 @@ export async function getSalesReport({ from, to }) {
   const range = { from: from || monthStartIso(), to: to || todayIso() };
 
   const [[totals]] = await pool.query(
-    `SELECT COUNT(*) AS total_transactions, COALESCE(SUM(total), 0) AS total_revenue FROM sales WHERE date BETWEEN ? AND ?`,
+    `SELECT COUNT(*) AS total_transactions, COALESCE(SUM(total), 0) AS total_revenue FROM sales WHERE status = 'selesai' AND date BETWEEN ? AND ?`,
     [range.from, range.to],
   );
   const [[itemTotals]] = await pool.query(
     `SELECT COALESCE(SUM(si.quantity), 0) AS total_items_sold
-     FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol' WHERE s.date BETWEEN ? AND ?`,
+     FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN products p ON p.id = si.product_id AND p.unit = 'botol' WHERE s.status = 'selesai' AND s.date BETWEEN ? AND ?`,
     [range.from, range.to],
   );
 
