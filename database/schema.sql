@@ -21,10 +21,26 @@ CREATE TABLE users (
 ) ENGINE=InnoDB;
 
 -- ==========================================================
+-- PRICE CATALOG (daftar harga acuan eceran, diisi admin)
+-- ==========================================================
+CREATE TABLE price_catalog (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL UNIQUE,
+  category VARCHAR(100) NOT NULL,
+  size VARCHAR(20) NOT NULL,
+  unit ENUM('botol', 'ml') NOT NULL DEFAULT 'botol',
+  price DECIMAL(12, 2) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT chk_catalog_price CHECK (price > 0)
+) ENGINE=InnoDB;
+
+-- ==========================================================
 -- PRODUCTS
 -- ==========================================================
 CREATE TABLE products (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  catalog_id INT UNSIGNED NULL,
   name VARCHAR(150) NOT NULL,
   category VARCHAR(100) NOT NULL,
   size VARCHAR(20) NOT NULL,
@@ -35,6 +51,7 @@ CREATE TABLE products (
   status ENUM('aktif', 'nonaktif') NOT NULL DEFAULT 'aktif',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_products_catalog FOREIGN KEY (catalog_id) REFERENCES price_catalog (id) ON DELETE SET NULL,
   CONSTRAINT chk_products_price CHECK (price >= 0),
   CONSTRAINT chk_products_stock CHECK (stock >= 0)
 ) ENGINE=InnoDB;

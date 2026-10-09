@@ -4,6 +4,7 @@ import { AppError } from '../utils/AppError.js';
 function mapProduct(row) {
   return {
     id: row.id,
+    catalogId: row.catalog_id,
     name: row.name,
     category: row.category,
     size: row.size,
@@ -27,7 +28,7 @@ export async function getProductById(id) {
   return rows[0] ? mapProduct(rows[0]) : null;
 }
 
-export async function createProduct({ name, category, size, unit, price, lowStockThreshold }) {
+export async function createProduct({ name, category, size, unit, price, lowStockThreshold, catalogId }) {
   if (!name?.trim() || !category?.trim() || !size?.trim()) {
     throw new AppError('Nama, kategori, dan ukuran produk wajib diisi.', 400);
   }
@@ -43,8 +44,8 @@ export async function createProduct({ name, category, size, unit, price, lowStoc
   }
 
   const [result] = await pool.query(
-    'INSERT INTO products (name, category, size, unit, price, stock, low_stock_threshold, status) VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
-    [name.trim(), category.trim(), size.trim(), productUnit, price, lowStockThreshold ?? 5, 'aktif'],
+    'INSERT INTO products (catalog_id, name, category, size, unit, price, stock, low_stock_threshold, status) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)',
+    [catalogId ?? null, name.trim(), category.trim(), size.trim(), productUnit, price, lowStockThreshold ?? 5, 'aktif'],
   );
 
   return getProductById(result.insertId);

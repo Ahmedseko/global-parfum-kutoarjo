@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   BarChart3,
   Settings,
+  Tags,
   LogOut,
   X,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/stok', label: 'Stok', icon: Boxes },
   { to: '/penjualan', label: 'Penjualan', icon: ShoppingCart },
   { to: '/closing', label: 'Closing Harian', icon: ClipboardCheck },
+  { to: '/katalog', label: 'Katalog', icon: Tags, adminOnly: true },
   { to: '/laporan', label: 'Laporan', icon: BarChart3, adminOnly: true },
   { to: '/pengaturan', label: 'Pengaturan', icon: Settings, adminOnly: true },
 ];

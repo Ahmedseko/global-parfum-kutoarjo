@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Package,
   Boxes,
+  Tags,
   ShoppingCart,
   ClipboardCheck,
   BarChart3,
@@ -16,6 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/produk', label: 'Produk', icon: Package },
+  { to: '/katalog', label: 'Katalog Harga', icon: Tags, adminOnly: true },
   { to: '/stok', label: 'Stok', icon: Boxes },
   { to: '/penjualan', label: 'Penjualan', icon: ShoppingCart },
   { to: '/closing', label: 'Closing Harian', icon: ClipboardCheck },

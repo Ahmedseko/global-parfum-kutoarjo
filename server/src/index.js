@@ -4,6 +4,7 @@ import 'dotenv/config';
 
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import catalogRoutes from './routes/catalogRoutes.js';
 import stockRoutes from './routes/stockRoutes.js';
 import saleRoutes from './routes/saleRoutes.js';
 import closingRoutes from './routes/closingRoutes.js';
@@ -21,6 +22,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/catalog', catalogRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/closing', closingRoutes);

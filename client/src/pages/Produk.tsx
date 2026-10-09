@@ -12,19 +12,9 @@ import { useAuth } from '../hooks/useAuth';
 import { listProducts, createProduct, updateProduct, deleteProduct, type ProductInput } from '../services/products';
 import type { Product, ProductUnit } from '../types';
 import { formatCurrency } from '../utils/format';
-
-const CATEGORIES = ['Parfum Refill', 'Botol Kosong', 'Parfum Botol', 'Bibit Parfum', 'Produk Pendukung'];
-const SIZES = ['10 ml', '20 ml', '25 ml', '30 ml', '50 ml', '100 ml']; // saran saja, ukuran bebas diketik admin
-const UNITS: { value: ProductUnit; label: string }[] = [
-  { value: 'botol', label: 'Botol / pcs' },
-  { value: 'ml', label: 'ml (varian parfum curah)' },
-];
-
-// Pilihan kategori otomatis menyetel satuan: refill = ml, botol kosong = pcs.
-const CATEGORY_DEFAULTS: Record<string, Partial<ProductInput>> = {
-  'Parfum Refill': { unit: 'ml', size: 'curah' },
-  'Botol Kosong': { unit: 'botol', size: '30 ml' },
-};
+import { CATEGORIES, CATEGORY_DEFAULTS, SIZES, UNITS } from '../utils/productOptions';
+import { listCatalog } from '../services/catalog';
+import type { CatalogItem } from '../types';
 
 const emptyForm: ProductInput = {
   name: '',
@@ -49,6 +39,7 @@ export default function Produk() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductInput>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
 
   function load() {
     setLoading(true);
@@ -58,6 +49,19 @@ export default function Produk() {
   }
 
   useEffect(load, []);
+  useEffect(() => {
+    if (isAdmin) listCatalog().then(setCatalog).catch(() => setCatalog([]));
+  }, [isAdmin]);
+
+  // Nama cocok dengan katalog -> kategori, ukuran, satuan, dan harga terisi otomatis.
+  function handleNameChange(name: string) {
+    const hit = catalog.find((c) => c.name.toLowerCase() === name.trim().toLowerCase());
+    if (hit && !editing) {
+      setForm({ ...form, name: hit.name, category: hit.category, size: hit.size, unit: hit.unit, price: hit.price, catalogId: hit.id });
+    } else {
+      setForm({ ...form, name, catalogId: editing ? form.catalogId : null });
+    }
+  }
 
   useEffect(() => {
     if (searchParams.get('new') && isAdmin) {
@@ -93,6 +97,7 @@ export default function Produk() {
       unit: product.unit,
       price: product.price,
       lowStockThreshold: product.lowStockThreshold,
+      catalogId: product.catalogId,
     });
     setModalOpen(true);
   }
@@ -254,7 +259,20 @@ export default function Produk() {
       >
         <div className="space-y-3.5">
           <FormField label="Nama Produk">
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Baccarat / Botol 30 ml" />
+            <Input
+              list="catalog-names"
+              value={form.name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="Ketik nama, harga terisi dari katalog"
+            />
+            <datalist id="catalog-names">
+              {catalog.map((c) => (
+                <option key={c.id} value={c.name} />
+              ))}
+            </datalist>
+            {form.catalogId && !editing && (
+              <p className="text-[11px] text-success mt-1">Harga diambil dari katalog.</p>
+            )}
           </FormField>
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Kategori">

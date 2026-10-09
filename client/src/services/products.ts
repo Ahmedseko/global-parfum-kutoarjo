@@ -8,6 +8,7 @@ export interface ProductInput {
   unit: ProductUnit;
   price: number;
   lowStockThreshold: number;
+  catalogId?: number | null;
 }
 
 export function listProducts() {
